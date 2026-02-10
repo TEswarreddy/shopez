@@ -3,13 +3,35 @@ import axiosInstance from "./axios"
 // Get all products with optional filters
 export const getProducts = async (params = {}) => {
   const response = await axiosInstance.get("/products", { params })
-  return response.data.products || []
+  const products = response.data.products || []
+  
+  // Transform products to match frontend expectations
+  return products.map(product => ({
+    ...product,
+    images: Array.isArray(product.images) 
+      ? product.images 
+      : (typeof product.images === 'string' ? product.images.split(' ').filter(Boolean) : []),
+    rating: product.ratings?.average || product.rating || 0,
+    brand: product.brand || product.vendor?.firstName || 'Unknown',
+    inStock: product.stock > 0
+  }))
 }
 
 // Get single product by ID
 export const getProductById = async (productId) => {
   const response = await axiosInstance.get(`/products/${productId}`)
-  return response.data.product
+  const product = response.data.product
+  
+  // Transform product to match frontend expectations
+  return {
+    ...product,
+    images: Array.isArray(product.images) 
+      ? product.images 
+      : (typeof product.images === 'string' ? product.images.split(' ').filter(Boolean) : []),
+    rating: product.ratings?.average || product.rating || 0,
+    brand: product.brand || product.vendor?.firstName || 'Unknown',
+    inStock: product.stock > 0
+  }
 }
 
 // Create new product (vendor only)

@@ -150,7 +150,7 @@ function Home() {
       return [...results].sort((a, b) => b.rating - a.rating)
     }
     return results
-  }, [searchQuery, selectedCategories, selectedBrands, priceRange, ratingMin, inStockOnly, sortBy])
+  }, [products, searchQuery, selectedCategories, selectedBrands, priceRange, ratingMin, inStockOnly, sortBy])
 
   const resetFilters = () => {
     setSearchQuery("")
@@ -569,8 +569,11 @@ function Home() {
                           </div>
                         )}
                         <div className="relative flex h-48 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-t from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <span className="text-sm font-semibold text-slate-400 group-hover:scale-110 transition-transform duration-300">Product Image</span>
+                          <img
+                            src={product.images?.[0] || "https://via.placeholder.com/400?text=No+Image"}
+                            alt={product.name}
+                            className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
                         </div>
                         <h3 className="mt-4 text-base font-semibold text-slate-900 line-clamp-2 group-hover:text-[#1f5fbf] transition-colors">{product.name}</h3>
                         <p className="text-xs text-slate-500 mt-1">
@@ -585,8 +588,8 @@ function Home() {
                               {product.rating}
                             </span>
                           )}
-                          {product.reviews && (
-                            <span className="text-slate-400">({product.reviews.toLocaleString()})</span>
+                          {product.reviews && product.reviews.length > 0 && (
+                            <span className="text-slate-400">({product.reviews.length})</span>
                           )}
                           <span
                             className={`ml-auto rounded-full px-2 py-1 text-xs font-semibold ${
@@ -602,13 +605,13 @@ function Home() {
                           <span className="text-xl font-bold text-slate-900">
                             {formatPrice(product.price)}
                           </span>
-                          {product.mrp && product.mrp > product.price && (
+                          {product.originalPrice && product.originalPrice > product.price && (
                             <>
                               <span className="text-sm text-slate-400 line-through">
-                                {formatPrice(product.mrp)}
+                                {formatPrice(product.originalPrice)}
                               </span>
                               <span className="text-xs font-semibold text-green-600">
-                                {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
+                                {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% off
                               </span>
                             </>
                           )}

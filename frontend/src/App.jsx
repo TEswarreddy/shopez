@@ -12,6 +12,7 @@ import Home from "./pages/user/Home"
 import Cart from "./pages/user/Cart"
 import Orders from "./pages/user/Orders"
 import ProductDetails from "./pages/user/ProductDetails"
+import Search from "./pages/user/Search"
 
 // Info Pages
 import About from "./pages/info/About"
@@ -42,6 +43,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetails />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
