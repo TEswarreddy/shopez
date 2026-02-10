@@ -1,113 +1,59 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-
-// Mock product data - will be replaced with API call
-const mockProducts = [
-  {
-    id: 1,
-    name: "iPhone 15 Pro",
-    price: 119999,
-    mrp: 129999,
-    rating: 4.7,
-    reviews: 1284,
-    badge: "Best Seller",
-    category: "Mobiles",
-    brand: "Apple",
-    inStock: true,
-    description: "The iPhone 15 Pro features a stunning titanium design with the powerful A17 Pro chip, advanced camera system, and USB-C connectivity. Experience pro-level performance in your pocket.",
-    highlights: [
-      "A17 Pro chip with 6-core GPU",
-      "Pro camera system (48MP Main | 12MP Ultra Wide | 12MP Telephoto)",
-      "6.1-inch Super Retina XDR display",
-      "Titanium design with textured matte glass back",
-      "Action button for quick shortcuts",
-      "USB-C with USB 3 speeds",
-    ],
-    specifications: {
-      Display: "6.1-inch Super Retina XDR",
-      Processor: "A17 Pro chip",
-      Camera: "48MP + 12MP + 12MP",
-      Battery: "Up to 23 hours video playback",
-      Storage: "128GB / 256GB / 512GB / 1TB",
-      Connectivity: "5G, Wi-Fi 6E, Bluetooth 5.3",
-      OS: "iOS 17",
-    },
-  },
-  {
-    id: 2,
-    name: "Samsung Neo QLED 55\"",
-    price: 67999,
-    mrp: 79999,
-    rating: 4.6,
-    reviews: 642,
-    badge: "Top Rated",
-    category: "Electronics",
-    brand: "Samsung",
-    inStock: true,
-    description: "Samsung Neo QLED TV delivers exceptional picture quality with Quantum Mini LEDs and Neural Quantum Processor. Enjoy breathtaking 4K resolution with stunning contrast and vibrant colors.",
-    highlights: [
-      "Quantum Mini LED technology",
-      "Neural Quantum Processor 4K",
-      "Quantum HDR 32x for incredible contrast",
-      "Anti-Glare & Ultra Viewing Angle",
-      "Dolby Atmos & Object Tracking Sound",
-      "Gaming Hub with 144Hz refresh rate",
-    ],
-    specifications: {
-      "Screen Size": "55 inches",
-      Resolution: "4K Ultra HD (3840 x 2160)",
-      "Display Type": "Neo QLED",
-      "Refresh Rate": "144Hz",
-      Sound: "Dolby Atmos, 60W",
-      Smart: "Tizen OS with Alexa & Bixby",
-      Connectivity: "4 HDMI, 2 USB, Wi-Fi, Bluetooth",
-    },
-  },
-  {
-    id: 3,
-    name: "Nike Air Zoom",
-    price: 6499,
-    mrp: 8999,
-    rating: 4.5,
-    reviews: 421,
-    badge: "Limited",
-    category: "Fashion",
-    brand: "Nike",
-    inStock: true,
-    description: "Nike Air Zoom running shoes combine responsive cushioning with a lightweight design for optimal performance. Perfect for runners who demand speed and comfort.",
-    highlights: [
-      "Zoom Air unit in the forefoot",
-      "Breathable mesh upper",
-      "Lightweight and responsive",
-      "Durable rubber outsole",
-      "Secure lace-up closure",
-      "Cushioned collar for comfort",
-    ],
-    specifications: {
-      Material: "Mesh & Synthetic",
-      "Sole Material": "Rubber",
-      Closure: "Lace-up",
-      "Shoe Width": "Medium",
-      "Care Instructions": "Wipe with clean, dry cloth",
-      Warranty: "3 months manufacturer warranty",
-    },
-  },
-]
+import { getProductById } from "../../api/productService"
+import { addToCart } from "../../api/cartService"
+import { addToWishlist } from "../../api/wishlistService"
 
 function ProductDetails() {
   const { id } = useParams()
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
 
-  // Find product by id (will be replaced with API call)
-  const product = mockProducts.find((p) => p.id === parseInt(id))
+  // Fetch product from API
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getProductById(id)
+        setProduct(data)
+      } catch (err) {
+        console.error("Error fetching product:", err)
+        setError(err.response?.data?.message || "Failed to load product")
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  if (!product) {
+    fetchProduct()
+  }, [id])
+
+  if (loading) {
     return (
       <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">Product Not Found</h1>
-          <Link to="/" className="text-[#1f5fbf] hover:underline font-semibold">
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-slate-300 border-t-[#1f5fbf] mb-4"></div>
+          <p className="text-slate-600">Loading product details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-slate-900 mb-4">
+            {error ? "Error Loading Product" : "Product Not Found"}
+          </h1>
+          {error && <p className="text-red-600 mb-4">{error}</p>}
+          <Link
+            to="/"
+            className="inline-block bg-[#1f5fbf] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#1a4da0] transition"
+          >
             Return to Home
           </Link>
         </div>
@@ -115,17 +61,51 @@ function ProductDetails() {
     )
   }
 
-  const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100)
+  const discount = product.mrp
+    ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
+    : 0
   const images = [1, 2, 3, 4] // Mock image count
 
-  const handleAddToCart = () => {
-    console.log("Add to cart:", product.id, "quantity:", quantity)
-    alert(`Added ${quantity} ${product.name} to cart!`)
+  const handleAddToCart = async () => {
+    try {
+      await addToCart(product._id, quantity)
+      alert(`Added ${quantity} ${product.name} to cart!`)
+    } catch (err) {
+      console.error("Error adding to cart:", err)
+      if (err.response?.status === 401) {
+        alert("Please login to add items to cart")
+      } else {
+        alert(err.response?.data?.message || "Failed to add to cart")
+      }
+    }
   }
 
-  const handleBuyNow = () => {
-    console.log("Buy now:", product.id)
-    alert("Proceeding to checkout...")
+  const handleBuyNow = async () => {
+    try {
+      await addToCart(product._id, quantity)
+      window.location.href = "/cart"
+    } catch (err) {
+      console.error("Error proceeding to checkout:", err)
+      if (err.response?.status === 401) {
+        alert("Please login to proceed")
+      } else {
+        alert(err.response?.data?.message || "Failed to proceed to checkout")
+      }
+    }
+  }
+
+  const handleAddToWishlist = async () => {
+    try {
+      await addToWishlist(product._id)
+      alert("Product added to wishlist!")
+    } catch (err) {
+      console.error("Error adding to wishlist:", err)
+      if (err.response?.status === 401) {
+        alert("Please login to add items to wishlist")
+      } else {
+        alert(err.response?.data?.message || "Failed to add to wishlist")
+      }
+    }
   }
 
   return (
@@ -225,7 +205,10 @@ function ProductDetails() {
                 </svg>
                 Add to Cart
               </button>
-              <button className="flex-shrink-0 bg-white border-2 border-slate-300 px-4 py-4 rounded-xl hover:bg-slate-50 transition">
+              <button
+                onClick={handleAddToWishlist}
+                className="flex-shrink-0 bg-white border-2 border-slate-300 px-4 py-4 rounded-xl hover:bg-slate-50 transition"
+              >
                 <svg
                   className="h-6 w-6 text-slate-600"
                   fill="none"
@@ -246,12 +229,16 @@ function ProductDetails() {
           {/* Right: Product Info */}
           <div className="space-y-6">
             {/* Badge & Brand */}
-            <div className="flex items-center gap-3">
-              <span className="inline-block rounded-full bg-[#1f5fbf] px-3 py-1 text-xs font-semibold text-white">
-                {product.badge}
-              </span>
-              <span className="text-sm text-slate-600">{product.brand}</span>
-            </div>
+            {(product.badge || product.brand) && (
+              <div className="flex items-center gap-3">
+                {product.badge && (
+                  <span className="inline-block rounded-full bg-[#1f5fbf] px-3 py-1 text-xs font-semibold text-white">
+                    {product.badge}
+                  </span>
+                )}
+                {product.brand && <span className="text-sm text-slate-600">{product.brand}</span>}
+              </div>
+            )}
 
             {/* Product Name */}
             <h1 className="text-3xl font-bold text-slate-900 leading-tight">
@@ -260,17 +247,21 @@ function ProductDetails() {
 
             {/* Rating & Reviews */}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <div className="flex items-center bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">
-                  {product.rating}
-                  <svg className="h-3 w-3 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
+              {product.rating && (
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">
+                    {product.rating}
+                    <svg className="h-3 w-3 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
+                  {product.reviews && (
+                    <span className="text-sm text-slate-600">
+                      {product.reviews.toLocaleString()} reviews
+                    </span>
+                  )}
                 </div>
-                <span className="text-sm text-slate-600">
-                  {product.reviews.toLocaleString()} reviews
-                </span>
-              </div>
+              )}
               {product.inStock ? (
                 <span className="text-sm font-semibold text-green-600">In Stock</span>
               ) : (
@@ -284,10 +275,14 @@ function ProductDetails() {
                 <span className="text-4xl font-bold text-slate-900">
                   ₹{product.price.toLocaleString()}
                 </span>
-                <span className="text-xl text-slate-500 line-through">
-                  ₹{product.mrp.toLocaleString()}
-                </span>
-                <span className="text-lg font-semibold text-green-600">{discount}% off</span>
+                {product.mrp && product.mrp > product.price && (
+                  <>
+                    <span className="text-xl text-slate-500 line-through">
+                      ₹{product.mrp.toLocaleString()}
+                    </span>
+                    <span className="text-lg font-semibold text-green-600">{discount}% off</span>
+                  </>
+                )}
               </div>
               <p className="text-sm text-slate-600 mt-2">Inclusive of all taxes</p>
             </div>
@@ -331,49 +326,55 @@ function ProductDetails() {
             </div>
 
             {/* Highlights */}
-            <div className="bg-blue-50 rounded-xl p-5">
-              <h3 className="font-semibold text-slate-900 mb-3">Key Highlights</h3>
-              <ul className="space-y-2">
-                {product.highlights.map((highlight, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
-                    <svg
-                      className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {highlight}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {product.highlights && product.highlights.length > 0 && (
+              <div className="bg-blue-50 rounded-xl p-5">
+                <h3 className="font-semibold text-slate-900 mb-3">Key Highlights</h3>
+                <ul className="space-y-2">
+                  {product.highlights.map((highlight, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
+                      <svg
+                        className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      {highlight}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Description Section */}
         <div className="mt-12 space-y-8">
-          <div className="bg-white rounded-2xl p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Product Description</h2>
-            <p className="text-slate-700 leading-relaxed">{product.description}</p>
-          </div>
+          {product.description && (
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Product Description</h2>
+              <p className="text-slate-700 leading-relaxed">{product.description}</p>
+            </div>
+          )}
 
           {/* Specifications */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Specifications</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {Object.entries(product.specifications).map(([key, value]) => (
-                <div key={key} className="flex border-b border-slate-200 pb-3">
-                  <span className="w-1/2 font-medium text-slate-700">{key}</span>
-                  <span className="w-1/2 text-slate-600">{value}</span>
-                </div>
-              ))}
+          {product.specifications && Object.keys(product.specifications).length > 0 && (
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Specifications</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {Object.entries(product.specifications).map(([key, value]) => (
+                  <div key={key} className="flex border-b border-slate-200 pb-3">
+                    <span className="w-1/2 font-medium text-slate-700">{key}</span>
+                    <span className="w-1/2 text-slate-600">{value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Customer Reviews */}
           <div className="bg-white rounded-2xl p-8 shadow-sm">

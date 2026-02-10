@@ -1,5 +1,8 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Link } from "react-router-dom"
+import { getProducts } from "../../api/productService"
+import { addToCart } from "../../api/cartService"
+import { addToWishlist } from "../../api/wishlistService"
 
 const categories = [
   "All",
@@ -20,120 +23,6 @@ const deals = [
   { title: "New Season", subtitle: "Fresh fashion edit", tag: "Hot" },
 ]
 
-const products = [
-  {
-    id: 1,
-    name: "iPhone 15 Pro",
-    price: 119999,
-    mrp: 129999,
-    rating: 4.7,
-    reviews: 1284,
-    badge: "Best Seller",
-    category: "Mobiles",
-    brand: "Apple",
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Samsung Neo QLED 55\"",
-    price: 67999,
-    mrp: 79999,
-    rating: 4.6,
-    reviews: 642,
-    badge: "Top Rated",
-    category: "Electronics",
-    brand: "Samsung",
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Nike Air Zoom",
-    price: 6499,
-    mrp: 8999,
-    rating: 4.5,
-    reviews: 421,
-    badge: "Limited",
-    category: "Fashion",
-    brand: "Nike",
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: "Sony WH-1000XM5",
-    price: 24999,
-    mrp: 29999,
-    rating: 4.8,
-    reviews: 3121,
-    badge: "Premium",
-    category: "Electronics",
-    brand: "Sony",
-    inStock: false,
-  },
-  {
-    id: 5,
-    name: "LG 7kg Washer",
-    price: 21999,
-    mrp: 26999,
-    rating: 4.4,
-    reviews: 388,
-    badge: "Eco",
-    category: "Appliances",
-    brand: "LG",
-    inStock: true,
-  },
-  {
-    id: 6,
-    name: "Boat Airdopes",
-    price: 1499,
-    mrp: 2999,
-    rating: 4.2,
-    reviews: 9821,
-    badge: "Deal",
-    category: "Electronics",
-    brand: "Boat",
-    inStock: true,
-  },
-  {
-    id: 7,
-    name: "Adidas Training Tee",
-    price: 899,
-    mrp: 1499,
-    rating: 4.1,
-    reviews: 284,
-    badge: "Trending",
-    category: "Fashion",
-    brand: "Adidas",
-    inStock: true,
-  },
-  {
-    id: 8,
-    name: "Prestige Mixer",
-    price: 2999,
-    mrp: 4299,
-    rating: 4.0,
-    reviews: 512,
-    badge: "Kitchen",
-    category: "Home",
-    brand: "Prestige",
-    inStock: true,
-  },
-  {
-    id: 9,
-    name: "Cosrx Snail Essence",
-    price: 1299,
-    mrp: 1799,
-    rating: 4.6,
-    reviews: 893,
-    badge: "Skincare",
-    category: "Beauty",
-    brand: "Cosrx",
-    inStock: false,
-  },
-]
-
-const filterCategories = Array.from(new Set(products.map((product) => product.category)))
-const filterBrands = Array.from(new Set(products.map((product) => product.brand)))
-
 const formatPrice = (value) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -143,6 +32,9 @@ const formatPrice = (value) => {
 }
 
 function Home() {
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategories, setSelectedCategories] = useState([])
   const [selectedBrands, setSelectedBrands] = useState([])
@@ -151,12 +43,69 @@ function Home() {
   const [inStockOnly, setInStockOnly] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
 
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getProducts()
+        setProducts(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error("Error fetching products:", err)
+        setError(err.response?.data?.message || "Failed to load products")
+        setProducts([]) // Ensure products is always an array even on error
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  // Calculate filter options from products
+  const filterCategories = useMemo(() => {
+    return Array.from(new Set(products.map((product) => product.category).filter(Boolean)))
+  }, [products])
+
+  const filterBrands = useMemo(() => {
+    return Array.from(new Set(products.map((product) => product.brand).filter(Boolean)))
+  }, [products])
+
   const toggleSelection = (value, list, setList) => {
     if (list.includes(value)) {
       setList(list.filter((item) => item !== value))
       return
     }
     setList([...list, value])
+  }
+
+  const handleAddToCart = async (productId) => {
+    try {
+      await addToCart(productId, 1)
+      alert("Product added to cart!")
+    } catch (err) {
+      console.error("Error adding to cart:", err)
+      if (err.response?.status === 401) {
+        alert("Please login to add items to cart")
+      } else {
+        alert(err.response?.data?.message || "Failed to add to cart")
+      }
+    }
+  }
+
+  const handleAddToWishlist = async (productId) => {
+    try {
+      await addToWishlist(productId)
+      alert("Product added to wishlist!")
+    } catch (err) {
+      console.error("Error adding to wishlist:", err)
+      if (err.response?.status === 401) {
+        alert("Please login to add items to wishlist")
+      } else {
+        alert(err.response?.data?.message || "Failed to add to wishlist")
+      }
+    }
   }
 
   const filteredProducts = useMemo(() => {
@@ -424,7 +373,23 @@ function Home() {
             </aside>
 
             <div>
-              {filteredProducts.length === 0 ? (
+              {loading ? (
+                <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#1f5fbf]"></div>
+                  <p className="mt-4 text-sm text-slate-600">Loading products...</p>
+                </div>
+              ) : error ? (
+                <div className="rounded-3xl border border-red-200 bg-red-50 p-10 text-center">
+                  <p className="text-sm text-red-600 font-semibold mb-2">Error loading products</p>
+                  <p className="text-xs text-red-500">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 rounded-full bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-700 transition"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredProducts.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
                   No products found. Try changing your filters.
                 </div>
@@ -432,10 +397,10 @@ function Home() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {filteredProducts.map((product) => (
                     <div
-                      key={product.id}
+                      key={product._id || product.id}
                       className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                     >
-                      <Link to={`/product/${product.id}`} className="block">
+                      <Link to={`/product/${product._id || product.id}`} className="block">
                         <div className="absolute right-4 top-4 rounded-full bg-[#1f5fbf]/10 px-3 py-1 text-xs font-semibold text-[#1f5fbf]">
                           {product.badge}
                         </div>
@@ -474,9 +439,9 @@ function Home() {
                         <button
                           onClick={(e) => {
                             e.preventDefault()
-                            console.log("Add to cart:", product.id)
+                            handleAddToCart(product._id)
                           }}
-                          className="flex-1 rounded-full bg-[#f7d443] px-4 py-2 text-sm font-semibold text-[#10366b] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="flex-1 rounded-full bg-[#f7d443] px-4 py-2 text-sm font-semibold text-[#10366b] disabled:cursor-not-allowed disabled:opacity-60 hover:bg-[#f7d443]/90 transition"
                           disabled={!product.inStock}
                         >
                           Add to cart
@@ -484,9 +449,9 @@ function Home() {
                         <button
                           onClick={(e) => {
                             e.preventDefault()
-                            console.log("Add to wishlist:", product.id)
+                            handleAddToWishlist(product._id)
                           }}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
                         >
                           Wish
                         </button>
