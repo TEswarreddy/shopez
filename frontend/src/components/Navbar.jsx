@@ -210,6 +210,9 @@ function Navbar() {
               <Link to="/orders" className="text-sm font-medium hover:text-[#f7d443] transition">
                 Orders
               </Link>
+              <Link to="/profile" className="text-sm font-medium hover:text-[#f7d443] transition">
+                Profile
+              </Link>
             </>
           )}
 

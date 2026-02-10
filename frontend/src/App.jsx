@@ -12,6 +12,7 @@ import Home from "./pages/user/Home"
 import Cart from "./pages/user/Cart"
 import Checkout from "./pages/user/Checkout"
 import Orders from "./pages/user/Orders"
+import Profile from "./pages/user/Profile"
 import ProductDetails from "./pages/user/ProductDetails"
 import Search from "./pages/user/Search"
 
@@ -84,6 +85,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Orders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />
