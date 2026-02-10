@@ -10,6 +10,7 @@ import Register from "./pages/auth/Register"
 // User Pages
 import Home from "./pages/user/Home"
 import Cart from "./pages/user/Cart"
+import Checkout from "./pages/user/Checkout"
 import Orders from "./pages/user/Orders"
 import ProductDetails from "./pages/user/ProductDetails"
 import Search from "./pages/user/Search"
@@ -67,6 +68,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Cart />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <Checkout />
               </ProtectedRoute>
             }
           />
