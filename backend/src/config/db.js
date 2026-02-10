@@ -12,7 +12,12 @@ const connectDB = async () => {
       );
     }
 
-    await mongoose.connect(process.env.MONGO_URI, {
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) {
+      throw new Error("Neither MONGODB_URI nor MONGO_URI is set in environment variables");
+    }
+    
+    await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
       family: 4
     });
