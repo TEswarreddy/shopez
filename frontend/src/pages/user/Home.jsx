@@ -42,6 +42,7 @@ function Home() {
   const [ratingMin, setRatingMin] = useState(0)
   const [inStockOnly, setInStockOnly] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   // Fetch products from API
   useEffect(() => {
@@ -236,11 +237,28 @@ function Home() {
 
         <section className="mt-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold">Product listing</h2>
-              <p className="text-sm text-slate-500">
-                {filteredProducts.length} items matched your filters.
-              </p>
+            <div className="flex items-center gap-3">
+              {/* Mobile Filter Button */}
+              <button
+                onClick={() => setMobileFiltersOpen(true)}
+                className="flex items-center gap-2 rounded-full border-2 border-[#1f5fbf] bg-white px-4 py-2 text-sm font-semibold text-[#1f5fbf] transition hover:bg-[#1f5fbf] hover:text-white lg:hidden"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filters
+                {(selectedCategories.length > 0 || selectedBrands.length > 0 || priceRange.min || priceRange.max || ratingMin > 0 || inStockOnly) && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1f5fbf] text-xs text-white">
+                    {selectedCategories.length + selectedBrands.length + (priceRange.min || priceRange.max ? 1 : 0) + (ratingMin > 0 ? 1 : 0) + (inStockOnly ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+              <div>
+                <h2 className="text-xl font-bold">Product listing</h2>
+                <p className="text-sm text-slate-500">
+                  {filteredProducts.length} items matched your filters.
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative">
@@ -265,7 +283,8 @@ function Home() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
-            <aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            {/* Desktop Filters - Hidden on Mobile */}
+            <aside className="hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:block">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-700">Filters</h3>
                 <button
@@ -371,6 +390,149 @@ function Home() {
                 </label>
               </div>
             </aside>
+
+            {/* Mobile Filter Drawer */}
+            {mobileFiltersOpen && (
+              <>
+                {/* Backdrop Overlay */}
+                <div
+                  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden"
+                  onClick={() => setMobileFiltersOpen(false)}
+                ></div>
+
+                {/* Drawer */}
+                <aside className="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] overflow-y-auto bg-white shadow-2xl transition-transform lg:hidden">
+                  {/* Drawer Header */}
+                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
+                    <h3 className="text-lg font-bold text-slate-900">Filters</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="text-sm font-semibold text-[#1f5fbf]"
+                        type="button"
+                        onClick={resetFilters}
+                      >
+                        Clear all
+                      </button>
+                      <button
+                        onClick={() => setMobileFiltersOpen(false)}
+                        className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                      >
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Drawer Content */}
+                  <div className="p-5">
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Categories</p>
+                      <div className="mt-3 space-y-2">
+                        {filterCategories.map((category) => (
+                          <label key={category} className="flex items-center gap-2 text-sm text-slate-600">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-[#1f5fbf]"
+                              checked={selectedCategories.includes(category)}
+                              onChange={() => toggleSelection(category, selectedCategories, setSelectedCategories)}
+                            />
+                            {category}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Brands</p>
+                      <div className="mt-3 space-y-2">
+                        {filterBrands.map((brand) => (
+                          <label key={brand} className="flex items-center gap-2 text-sm text-slate-600">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-[#1f5fbf]"
+                              checked={selectedBrands.includes(brand)}
+                              onChange={() => toggleSelection(brand, selectedBrands, setSelectedBrands)}
+                            />
+                            {brand}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Price range</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <input
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600"
+                          placeholder="Min"
+                          type="number"
+                          value={priceRange.min}
+                          onChange={(event) => setPriceRange({ ...priceRange, min: event.target.value })}
+                        />
+                        <input
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600"
+                          placeholder="Max"
+                          type="number"
+                          value={priceRange.max}
+                          onChange={(event) => setPriceRange({ ...priceRange, max: event.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Customer rating</p>
+                      <div className="mt-3 space-y-2">
+                        {[4, 3, 2, 1].map((value) => (
+                          <label key={value} className="flex items-center gap-2 text-sm text-slate-600">
+                            <input
+                              type="radio"
+                              name="rating-mobile"
+                              className="h-4 w-4 border-slate-300 text-[#1f5fbf]"
+                              checked={ratingMin === value}
+                              onChange={() => setRatingMin(value)}
+                            />
+                            {value}+ stars
+                          </label>
+                        ))}
+                        <label className="flex items-center gap-2 text-sm text-slate-600">
+                          <input
+                            type="radio"
+                            name="rating-mobile"
+                            className="h-4 w-4 border-slate-300 text-[#1f5fbf]"
+                            checked={ratingMin === 0}
+                            onChange={() => setRatingMin(0)}
+                          />
+                          All ratings
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-[#1f5fbf]"
+                          checked={inStockOnly}
+                          onChange={() => setInStockOnly(!inStockOnly)}
+                        />
+                        In stock only
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Drawer Footer */}
+                  <div className="sticky bottom-0 border-t border-slate-200 bg-white p-4">
+                    <button
+                      onClick={() => setMobileFiltersOpen(false)}
+                      className="w-full rounded-lg bg-[#1f5fbf] py-3 font-semibold text-white transition hover:bg-[#1a4da0] active:scale-95"
+                    >
+                      Apply Filters ({filteredProducts.length} items)
+                    </button>
+                  </div>
+                </aside>
+              </>
+            )}
 
             <div>
               {loading ? (
