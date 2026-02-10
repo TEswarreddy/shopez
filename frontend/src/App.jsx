@@ -13,6 +13,20 @@ import Cart from "./pages/user/Cart"
 import Orders from "./pages/user/Orders"
 import ProductDetails from "./pages/user/ProductDetails"
 
+// Info Pages
+import About from "./pages/info/About"
+import Careers from "./pages/info/Careers"
+
+// Help Pages
+import Payments from "./pages/help/Payments"
+import Shipping from "./pages/help/Shipping"
+import Cancellation from "./pages/help/Cancellation"
+import FAQ from "./pages/help/FAQ"
+
+// Policy Pages
+import Terms from "./pages/policies/Terms"
+import Privacy from "./pages/policies/Privacy"
+
 // Vendor Pages
 import VendorDashboard from "./pages/restaurant/Dashboard"
 
@@ -30,6 +44,20 @@ function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Info Pages */}
+          <Route path="/about" element={<About />} />
+          <Route path="/careers" element={<Careers />} />
+
+          {/* Help Pages */}
+          <Route path="/help/payments" element={<Payments />} />
+          <Route path="/help/shipping" element={<Shipping />} />
+          <Route path="/help/cancellation" element={<Cancellation />} />
+          <Route path="/help/faq" element={<FAQ />} />
+
+          {/* Policy Pages */}
+          <Route path="/policies/terms" element={<Terms />} />
+          <Route path="/policies/privacy" element={<Privacy />} />
 
           {/* User Routes - Protected */}
           <Route

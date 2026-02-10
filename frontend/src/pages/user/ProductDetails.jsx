@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { getProductById } from "../../api/productService"
 import { addToCart } from "../../api/cartService"
 import { addToWishlist } from "../../api/wishlistService"
 
 function ProductDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImage, setSelectedImage] = useState(0)
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [addingToCart, setAddingToCart] = useState(false)
+  const [addedToWishlist, setAddedToWishlist] = useState(false)
 
   // Fetch product from API
   useEffect(() => {
@@ -68,35 +72,49 @@ function ProductDetails() {
 
   const handleAddToCart = async () => {
     try {
+      setAddingToCart(true)
       await addToCart(product._id, quantity)
+      // Show success feedback
+      const btn = document.activeElement
+      btn.classList.add('scale-95')
+      setTimeout(() => btn.classList.remove('scale-95'), 200)
       alert(`Added ${quantity} ${product.name} to cart!`)
     } catch (err) {
       console.error("Error adding to cart:", err)
       if (err.response?.status === 401) {
         alert("Please login to add items to cart")
+        navigate('/login')
       } else {
         alert(err.response?.data?.message || "Failed to add to cart")
       }
+    } finally {
+      setAddingToCart(false)
     }
   }
 
   const handleBuyNow = async () => {
     try {
+      setAddingToCart(true)
       await addToCart(product._id, quantity)
-      window.location.href = "/cart"
+      navigate('/cart')
     } catch (err) {
       console.error("Error proceeding to checkout:", err)
       if (err.response?.status === 401) {
         alert("Please login to proceed")
+        navigate('/login')
       } else {
         alert(err.response?.data?.message || "Failed to proceed to checkout")
       }
+    } finally {
+      setAddingToCart(false)
     }
   }
 
   const handleAddToWishlist = async () => {
     try {
       await addToWishlist(product._id)
+      setAddedToWishlist(true)
+      setTimeout(() => setAddedToWishlist(false), 2000)
       alert("Product added to wishlist!")
     } catch (err) {
       console.error("Error adding to wishlist:", err)
@@ -128,16 +146,22 @@ function ProductDetails() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-8 lg:grid-cols-2 xl:gap-12">
           {/* Left: Images */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
             {/* Main Image */}
-            <div className="aspect-square overflow-hidden rounded-2xl bg-white border border-slate-200">
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="h-64 w-64 mx-auto bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center mb-4">
+            <div 
+              className="group relative aspect-square overflow-hidden rounded-2xl bg-white border-2 border-slate-200 cursor-zoom-in hover:border-[#1f5fbf]/50 transition-colors"
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+            >
+              <div className="flex h-full items-center justify-center relative">
+                <div className={`text-center p-8 transition-transform duration-300 ${
+                  isZoomed ? 'scale-110' : 'scale-100'
+                }`}>
+                  <div className="h-64 w-64 mx-auto bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 rounded-lg flex items-center justify-center mb-4 shadow-inner">
                     <svg
-                      className="h-32 w-32 text-slate-400"
+                      className="h-32 w-32 text-slate-400 group-hover:scale-110 transition-transform duration-300"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -150,27 +174,34 @@ function ProductDetails() {
                       />
                     </svg>
                   </div>
-                  <p className="text-sm text-slate-500">Image {selectedImage + 1}</p>
-                  <p className="text-xs text-slate-400 mt-1">{product.name}</p>
+                  <p className="text-sm text-slate-500 font-medium">Image {selectedImage + 1} of {images.length}</p>
+                  <p className="text-xs text-slate-400 mt-1 line-clamp-1">{product.name}</p>
                 </div>
+                {isZoomed && (
+                  <div className="absolute top-4 right-4 bg-black/75 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
+                    Hover to zoom
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Thumbnail Images */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {images.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
-                  className={`flex-1 aspect-square rounded-lg border-2 transition overflow-hidden ${
+                  className={`aspect-square rounded-xl border-2 transition-all duration-200 overflow-hidden ${
                     selectedImage === idx
-                      ? "border-[#1f5fbf] shadow-md"
-                      : "border-slate-200 hover:border-slate-300"
+                      ? "border-[#1f5fbf] shadow-lg scale-105 ring-2 ring-[#1f5fbf]/20"
+                      : "border-slate-200 hover:border-[#1f5fbf]/50 hover:scale-105"
                   }`}
                 >
-                  <div className="h-full bg-slate-100 flex items-center justify-center">
+                  <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center hover:from-slate-100 hover:to-slate-50 transition-colors">
                     <svg
-                      className="h-8 w-8 text-slate-400"
+                      className={`h-8 w-8 text-slate-400 transition-transform ${
+                        selectedImage === idx ? 'scale-110 text-[#1f5fbf]' : ''
+                      }`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -188,8 +219,12 @@ function ProductDetails() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button className="flex-1 bg-[#f7d443] text-[#10366b] px-6 py-4 rounded-xl font-bold text-lg hover:bg-[#f7d443]/90 transition shadow-lg">
+            <div className="hidden lg:flex gap-3">
+              <button 
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+                className="flex-1 bg-[#f7d443] text-[#10366b] px-6 py-4 rounded-xl font-bold text-lg hover:bg-[#f7d443]/90 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <svg
                   className="inline h-6 w-6 mr-2"
                   fill="none"
@@ -203,15 +238,20 @@ function ProductDetails() {
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                   />
                 </svg>
-                Add to Cart
+                {addingToCart ? 'Adding...' : 'Add to Cart'}
               </button>
               <button
                 onClick={handleAddToWishlist}
-                className="flex-shrink-0 bg-white border-2 border-slate-300 px-4 py-4 rounded-xl hover:bg-slate-50 transition"
+                className={`flex-shrink-0 border-2 px-4 py-4 rounded-xl hover:scale-110 active:scale-95 transition-all duration-200 ${
+                  addedToWishlist 
+                    ? 'bg-rose-50 border-rose-300 text-rose-600' 
+                    : 'bg-white border-slate-300 text-slate-600 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600'
+                }`}
+                title="Add to wishlist"
               >
                 <svg
-                  className="h-6 w-6 text-slate-600"
-                  fill="none"
+                  className="h-6 w-6"
+                  fill={addedToWishlist ? 'currentColor' : 'none'}
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
@@ -292,36 +332,45 @@ function ProductDetails() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Quantity
               </label>
-              <div className="flex items-center gap-3">
+              <div className="inline-flex items-center gap-3 bg-slate-50 rounded-xl p-1 border-2 border-slate-200">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="h-10 w-10 rounded-lg border-2 border-slate-300 hover:bg-slate-100 transition font-semibold"
+                  className="h-10 w-10 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 hover:border-[#1f5fbf] hover:scale-110 active:scale-95 transition-all font-bold text-slate-700"
+                  disabled={quantity <= 1}
                 >
                   −
                 </button>
-                <span className="w-12 text-center font-semibold text-lg">{quantity}</span>
+                <span className="w-12 text-center font-bold text-xl text-slate-900">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="h-10 w-10 rounded-lg border-2 border-slate-300 hover:bg-slate-100 transition font-semibold"
+                  className="h-10 w-10 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 hover:border-[#1f5fbf] hover:scale-110 active:scale-95 transition-all font-bold text-slate-700"
                 >
                   +
                 </button>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4">
+            {/* Action Buttons - Desktop */}
+            <div className="hidden lg:flex gap-4">
               <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-[#1f5fbf] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#1a4da0] transition shadow-lg"
+                disabled={addingToCart}
+                className="flex-1 bg-[#1f5fbf] text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#1a4da0] hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add to Cart
+                <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {addingToCart ? 'Adding...' : 'Add to Cart'}
               </button>
               <button
                 onClick={handleBuyNow}
-                className="flex-1 bg-[#f7d443] text-[#10366b] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#f7d443]/90 transition shadow-lg"
+                disabled={addingToCart}
+                className="flex-1 bg-[#f7d443] text-[#10366b] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#f7d443]/90 hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Buy Now
+                <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {addingToCart ? 'Processing...' : 'Buy Now'}
               </button>
             </div>
 
@@ -501,7 +550,57 @@ function ProductDetails() {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Sticky Action Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 p-4 shadow-2xl z-50">
+        <div className="flex gap-3">
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart}
+            className="flex-1 bg-[#1f5fbf] text-white px-6 py-4 rounded-xl font-bold hover:bg-[#1a4da0] active:scale-95 transition-all shadow-lg disabled:opacity-50"
+          >
+            <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            {addingToCart ? 'Adding...' : 'Cart'}
+          </button>
+          <button
+            onClick={handleBuyNow}
+            disabled={addingToCart}
+            className="flex-1 bg-[#f7d443] text-[#10366b] px-6 py-4 rounded-xl font-bold hover:bg-[#f7d443]/90 active:scale-95 transition-all shadow-lg disabled:opacity-50"
+          >
+            <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {addingToCart ? 'Processing...' : 'Buy Now'}
+          </button>
+        </div>
+      </div>
+      {/* Mobile Sticky Action Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 p-4 shadow-2xl z-50">
+        <div className="flex gap-3">
+          <button
+            onClick={handleAddToCart}
+            disabled={addingToCart}
+            className="flex-1 bg-[#1f5fbf] text-white px-6 py-4 rounded-xl font-bold hover:bg-[#1a4da0] active:scale-95 transition-all shadow-lg disabled:opacity-50"
+          >
+            <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            {addingToCart ? 'Adding...' : 'Cart'}
+          </button>
+          <button
+            onClick={handleBuyNow}
+            disabled={addingToCart}
+            className="flex-1 bg-[#f7d443] text-[#10366b] px-6 py-4 rounded-xl font-bold hover:bg-[#f7d443]/90 active:scale-95 transition-all shadow-lg disabled:opacity-50"
+          >
+            <svg className="inline h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {addingToCart ? 'Processing...' : 'Buy Now'}
+          </button>
+        </div>
+      </div>    </div>
   )
 }
 

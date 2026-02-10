@@ -394,45 +394,62 @@ function Home() {
                   No products found. Try changing your filters.
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredProducts.map((product) => (
                     <div
                       key={product._id || product.id}
-                      className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                      className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-[#1f5fbf]/30"
                     >
                       <Link to={`/product/${product._id || product.id}`} className="block">
-                        <div className="absolute right-4 top-4 rounded-full bg-[#1f5fbf]/10 px-3 py-1 text-xs font-semibold text-[#1f5fbf]">
-                          {product.badge}
+                        {product.badge && (
+                          <div className="absolute right-4 top-4 z-10 rounded-full bg-[#1f5fbf]/10 px-3 py-1 text-xs font-semibold text-[#1f5fbf] backdrop-blur-sm">
+                            {product.badge}
+                          </div>
+                        )}
+                        <div className="relative flex h-48 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-t from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <span className="text-sm font-semibold text-slate-400 group-hover:scale-110 transition-transform duration-300">Product Image</span>
                         </div>
-                        <div className="flex h-32 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-400">
-                          Product Image
-                        </div>
-                        <h3 className="mt-4 text-base font-semibold text-slate-900">{product.name}</h3>
-                        <p className="text-xs text-slate-500">
+                        <h3 className="mt-4 text-base font-semibold text-slate-900 line-clamp-2 group-hover:text-[#1f5fbf] transition-colors">{product.name}</h3>
+                        <p className="text-xs text-slate-500 mt-1">
                           {product.brand} · {product.category}
                         </p>
-                        <div className="mt-2 flex items-center gap-2 text-xs">
-                          <span className="rounded-full bg-emerald-100 px-2 py-1 font-semibold text-emerald-700">
-                            {product.rating}★
-                          </span>
-                          <span className="text-slate-400">({product.reviews})</span>
+                        <div className="mt-2 flex items-center gap-2 text-xs flex-wrap">
+                          {product.rating && (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 font-semibold text-emerald-700 inline-flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                              {product.rating}
+                            </span>
+                          )}
+                          {product.reviews && (
+                            <span className="text-slate-400">({product.reviews.toLocaleString()})</span>
+                          )}
                           <span
                             className={`ml-auto rounded-full px-2 py-1 text-xs font-semibold ${
                               product.inStock
-                                ? "bg-slate-100 text-slate-600"
-                                : "bg-rose-100 text-rose-600"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-rose-50 text-rose-700 border border-rose-200"
                             }`}
                           >
                             {product.inStock ? "In stock" : "Out of stock"}
                           </span>
                         </div>
                         <div className="mt-3 flex items-baseline gap-2">
-                          <span className="text-lg font-bold text-slate-900">
+                          <span className="text-xl font-bold text-slate-900">
                             {formatPrice(product.price)}
                           </span>
-                          <span className="text-sm text-slate-400 line-through">
-                            {formatPrice(product.mrp)}
-                          </span>
+                          {product.mrp && product.mrp > product.price && (
+                            <>
+                              <span className="text-sm text-slate-400 line-through">
+                                {formatPrice(product.mrp)}
+                              </span>
+                              <span className="text-xs font-semibold text-green-600">
+                                {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
+                              </span>
+                            </>
+                          )}
                         </div>
                       </Link>
                       <div className="mt-4 flex gap-2">
@@ -441,9 +458,12 @@ function Home() {
                             e.preventDefault()
                             handleAddToCart(product._id)
                           }}
-                          className="flex-1 rounded-full bg-[#f7d443] px-4 py-2 text-sm font-semibold text-[#10366b] disabled:cursor-not-allowed disabled:opacity-60 hover:bg-[#f7d443]/90 transition"
+                          className="flex-1 rounded-full bg-[#f7d443] px-4 py-2.5 text-sm font-semibold text-[#10366b] disabled:cursor-not-allowed disabled:opacity-60 hover:bg-[#f7d443]/90 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
                           disabled={!product.inStock}
                         >
+                          <svg className="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
                           Add to cart
                         </button>
                         <button
@@ -451,9 +471,12 @@ function Home() {
                             e.preventDefault()
                             handleAddToWishlist(product._id)
                           }}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
+                          className="rounded-full border-2 border-slate-200 p-2.5 text-slate-600 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 hover:scale-110 active:scale-95 transition-all duration-200"
+                          title="Add to wishlist"
                         >
-                          Wish
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
                         </button>
                       </div>
                     </div>
