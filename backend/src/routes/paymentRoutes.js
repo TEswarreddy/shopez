@@ -20,7 +20,7 @@ router.post("/verify", auth, verifyPayment);
 router.get("/details/:paymentId", auth, getPaymentDetails);
 
 // Refund payment (admin only)
-router.post("/refund", auth, adminAuth, refundPayment);
+router.post("/refund", adminAuth, refundPayment);
 
 // Webhook endpoint (no auth required)
 router.post("/webhook", handleWebhook);
