@@ -204,6 +204,9 @@ function Navbar() {
           
           {user && (
             <>
+              <Link to="/wishlist" className="text-sm font-medium hover:text-[#f7d443] transition">
+                Wishlist
+              </Link>
               <Link to="/cart" className="text-sm font-medium hover:text-[#f7d443] transition">
                 Cart
               </Link>

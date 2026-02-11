@@ -36,6 +36,9 @@ const addToWishlist = async (req, res) => {
       await wishlist.save();
     }
 
+    // Populate products before returning
+    await wishlist.populate("products.product");
+
     res.json({ success: true, message: "Product added to wishlist", wishlist });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -58,6 +61,9 @@ const removeFromWishlist = async (req, res) => {
     );
 
     await wishlist.save();
+
+    // Populate products before returning
+    await wishlist.populate("products.product");
 
     res.json({ success: true, message: "Product removed from wishlist", wishlist });
   } catch (error) {

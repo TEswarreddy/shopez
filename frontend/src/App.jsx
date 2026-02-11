@@ -13,6 +13,7 @@ import Cart from "./pages/user/Cart"
 import Checkout from "./pages/user/Checkout"
 import Orders from "./pages/user/Orders"
 import Profile from "./pages/user/Profile"
+import Wishlist from "./pages/user/Wishlist"
 import ProductDetails from "./pages/user/ProductDetails"
 import Search from "./pages/user/Search"
 
@@ -93,6 +94,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wishlist"
+            element={
+              <ProtectedRoute>
+                <Wishlist />
               </ProtectedRoute>
             }
           />
