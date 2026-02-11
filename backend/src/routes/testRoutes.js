@@ -1,13 +1,101 @@
 // Simple test endpoint to verify Razorpay connection
 const express = require("express")
 const Razorpay = require("razorpay")
+const User = require("../models/User")
+const Admin = require("../models/Admin")
 require("dotenv").config()
 
 const router = express.Router()
 
-console.log("🔍 Razorpay Test Endpoint Initialized")
-console.log("API Key:", process.env.RAZORPAY_KEY_ID ? "✅ SET" : "❌ NOT SET")
-console.log("API Secret:", process.env.RAZORPAY_KEY_SECRET ? "✅ SET" : "❌ NOT SET")
+console.log("🔍 Test Routes Initialized")
+console.log("Razorpay API Key:", process.env.RAZORPAY_KEY_ID ? "✅ SET" : "❌ NOT SET")
+console.log("Razorpay API Secret:", process.env.RAZORPAY_KEY_SECRET ? "✅ SET" : "❌ NOT SET")
+
+// Create super admin endpoint (for testing only)
+router.post("/create-admin", async (req, res) => {
+  try {
+    console.log("\n🔐 Creating super admin...")
+
+    // Check if already exists
+    let user = await User.findOne({ email: 'superadmin@shopez.com' })
+    if (user) {
+      const admin = await Admin.findOne({ user: user._id })
+      if (admin) {
+        return res.json({
+          success: true,
+          message: "Super admin already exists",
+          email: "superadmin@shopez.com"
+        })
+      }
+    }
+
+    // Create user
+    if (!user) {
+      user = await User.create({
+        firstName: 'Super',
+        lastName: 'Admin',
+        email: 'superadmin@shopez.com',
+        password: 'admin123',
+        role: 'admin',
+        isEmailVerified: true,
+        isActive: true
+      })
+      console.log('✅ User created')
+    }
+
+    // Create admin profile
+    const admin = await Admin.create({
+      user: user._id,
+      adminLevel: 'super_admin',
+      department: 'management',
+      employeeId: 'SA001',
+      permissions: {
+        canManageUsers: true,
+        canDeleteUsers: true,
+        canSuspendUsers: true,
+        canManageVendors: true,
+        canVerifyVendors: true,
+        canSuspendVendors: true,
+        canDeleteVendors: true,
+        canManageProducts: true,
+        canDeleteProducts: true,
+        canFeatureProducts: true,
+        canManageOrders: true,
+        canRefundOrders: true,
+        canCancelOrders: true,
+        canManageCategories: true,
+        canManageBanners: true,
+        canManagePromotions: true,
+        canViewFinancials: true,
+        canProcessPayouts: true,
+        canManageCommissions: true,
+        canManageSettings: true,
+        canViewLogs: true,
+        canManageAdmins: true,
+      },
+      isActive: true
+    })
+    console.log('✅ Admin profile created')
+
+    res.json({
+      success: true,
+      message: "Super admin created successfully",
+      data: {
+        email: "superadmin@shopez.com",
+        password: "admin123",
+        level: "super_admin",
+        loginUrl: "http://localhost:5173/admin-access/login"
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error:', error.message)
+    res.status(500).json({
+      success: false,
+      message: "Failed to create super admin",
+      error: error.message
+    })
+  }
+})
 
 // Test Razorpay connection
 router.get("/test-razorpay", async (req, res) => {
