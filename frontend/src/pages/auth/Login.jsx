@@ -7,11 +7,12 @@ function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { setUser } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError("")
   }
 
   const handleSubmit = async (e) => {
@@ -20,24 +21,14 @@ function Login() {
     setLoading(true)
 
     try {
-      const response = await axiosInstance.post("/auth/login", formData)
+      const response = await axiosInstance.post("/auth/login", {
+        ...formData,
+        role: "customer"
+      })
       const { token, user } = response.data
       
-      // Store token and user in localStorage
-      localStorage.setItem("token", token)
-      localStorage.setItem("user", JSON.stringify(user))
-      
-      // Set user in context
-      setUser(user)
-      
-      // Redirect based on role
-      if (user.role === "admin") {
-        navigate("/admin/dashboard")
-      } else if (user.role === "vendor") {
-        navigate("/vendor/dashboard")
-      } else {
-        navigate("/")
-      }
+      login(token, user)
+      navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.")
     } finally {
@@ -46,11 +37,11 @@ function Login() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900">Welcome Back</h1>
+            <h1 className="text-3xl font-bold text-slate-900">Customer Login</h1>
             <p className="text-slate-600 mt-2">Login to your ShopEz account</p>
           </div>
 
@@ -102,22 +93,18 @@ function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-slate-600 text-sm">
               Don't have an account?{" "}
               <Link to="/register" className="text-[#1f5fbf] font-semibold hover:underline">
                 Register here
               </Link>
             </p>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-xs text-slate-500 text-center">
-              <strong>Test Accounts:</strong><br />
-              Customer: customer@test.com | test123<br />
-              Vendor: vendor@test.com | test123<br />
-              Admin: admin@test.com | test123
-            </p>
+            <div className="text-center text-sm">
+              <Link to="/vendor/login" className="text-[#1f5fbf] hover:underline">
+                Vendor Login
+              </Link>
+            </div>
           </div>
         </div>
       </div>

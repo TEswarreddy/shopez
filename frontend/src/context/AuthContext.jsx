@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react"
+import { createContext, useContext, useMemo, useState, useCallback } from "react"
 
 export const AuthContext = createContext(null)
 
@@ -20,7 +20,28 @@ export function AuthProvider({ children }) {
     return null
   })
 
-  const value = useMemo(() => ({ user, setUser }), [user])
+  const login = useCallback((token, userData) => {
+    localStorage.setItem("token", token)
+    localStorage.setItem("user", JSON.stringify(userData))
+    setUser(userData)
+  }, [])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    setUser(null)
+  }, [])
+
+  const value = useMemo(() => ({ 
+    user, 
+    setUser, 
+    login, 
+    logout,
+    isAuthenticated: !!user,
+    isCustomer: user?.role === "customer",
+    isVendor: user?.role === "vendor",
+    isAdmin: user?.role === "admin"
+  }), [user, login, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext"
 import { getSearchSuggestions } from "../api/searchService"
 
 function Navbar() {
-  const { user, setUser } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   
   // Search state
@@ -16,9 +16,7 @@ function Navbar() {
   const debounceTimer = useRef(null)
 
   const handleLogout = () => {
-    setUser(null)
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
+    logout()
     navigate("/")
   }
 

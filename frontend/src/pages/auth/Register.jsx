@@ -9,15 +9,16 @@ function Register() {
     lastName: "",
     email: "",
     password: "",
-    role: "customer"
+    phone: ""
   })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const { setUser } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    setError("")
   }
 
   const handleSubmit = async (e) => {
@@ -26,18 +27,11 @@ function Register() {
     setLoading(true)
 
     try {
-      const response = await axiosInstance.post("/auth/signup", formData)
+      const response = await axiosInstance.post("/auth/customer/signup", formData)
       const { token, user } = response.data
       
-      localStorage.setItem("token", token)
-      localStorage.setItem("user", JSON.stringify(user))
-      setUser(user)
-      
-      if (user.role === "vendor") {
-        navigate("/vendor/dashboard")
-      } else {
-        navigate("/")
-      }
+      login(token, user)
+      navigate("/")
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.")
     } finally {
@@ -46,12 +40,12 @@ function Register() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-12 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-slate-900">Create Account</h1>
-            <p className="text-slate-600 mt-2">Join ShopEz today</p>
+            <p className="text-slate-600 mt-2">Join ShopEz as a Customer</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -111,6 +105,21 @@ function Register() {
             </div>
 
             <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
+                Phone Number (Optional)
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1f5fbf] focus:border-transparent outline-none transition"
+                placeholder="10-digit mobile number"
+              />
+            </div>
+
+            <div>
               <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
                 Password
               </label>
@@ -127,22 +136,6 @@ function Register() {
               />
             </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-2">
-                Account Type
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1f5fbf] focus:border-transparent outline-none transition"
-              >
-                <option value="customer">Customer</option>
-                <option value="vendor">Vendor</option>
-              </select>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -152,11 +145,17 @@ function Register() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-slate-600 text-sm">
               Already have an account?{" "}
               <Link to="/login" className="text-[#1f5fbf] font-semibold hover:underline">
                 Login here
+              </Link>
+            </p>
+            <p className="text-slate-600 text-sm">
+              Want to sell on ShopEz?{" "}
+              <Link to="/vendor/register" className="text-[#1f5fbf] font-semibold hover:underline">
+                Register as Vendor
               </Link>
             </p>
           </div>

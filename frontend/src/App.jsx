@@ -6,6 +6,9 @@ import ProtectedRoute from "./components/ProtectedRoute"
 // Auth Pages
 import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
+import VendorLogin from "./pages/auth/VendorLogin"
+import VendorRegister from "./pages/auth/VendorRegister"
+import AdminLogin from "./pages/auth/AdminLogin"
 
 // User Pages
 import Home from "./pages/user/Home"
@@ -37,6 +40,11 @@ import VendorDashboard from "./pages/restaurant/Dashboard"
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard"
+import AdminList from "./pages/admin/AdminList"
+import VendorManagement from "./pages/admin/VendorManagement"
+import CustomerManagement from "./pages/admin/CustomerManagement"
+import ProductManagement from "./pages/admin/ProductManagement"
+import OrderManagement from "./pages/admin/OrderManagement"
 
 function App() {
   return (
@@ -48,8 +56,15 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/search" element={<Search />} />
+          
+          {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/vendor/login" element={<VendorLogin />} />
+          <Route path="/vendor/register" element={<VendorRegister />} />
+          
+          {/* Hidden Admin Login - Only accessible via direct URL */}
+          <Route path="/admin-access/login" element={<AdminLogin />} />
 
           {/* Info Pages */}
           <Route path="/about" element={<About />} />
@@ -131,6 +146,46 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/admins"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vendors"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <VendorManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <CustomerManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <ProductManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <OrderManagement />
               </ProtectedRoute>
             }
           />
