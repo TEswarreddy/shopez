@@ -24,6 +24,7 @@ app.use("/api/cart", require("./routes/cartRoutes"));
 app.use("/api/wishlist", require("./routes/wishlistRoutes"));
 app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/vendor", require("./routes/vendorRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/test", require("./routes/testRoutes"));
 
