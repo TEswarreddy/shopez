@@ -21,7 +21,6 @@ const orderSchema = new mongoose.Schema(
         vendor: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
-          required: true,
         },
         quantity: {
           type: Number,
@@ -43,6 +42,8 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     shippingAddress: {
+      fullName: String,
+      phone: String,
       street: String,
       city: String,
       state: String,
@@ -51,7 +52,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["card", "razorpay", "cod"],
+      enum: ["card", "razorpay", "cod", "upi", "wallet"],
       required: true,
     },
     paymentStatus: {
@@ -60,6 +61,7 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
     transactionId: String,
+    razorpayOrderId: String,
     status: {
       type: String,
       enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"],
@@ -73,13 +75,5 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Generate order number before saving
-orderSchema.pre("save", async function (next) {
-  if (!this.orderNumber) {
-    this.orderNumber = `ORD-${Date.now()}`;
-  }
-  next();
-});
 
 module.exports = mongoose.model("Order", orderSchema);

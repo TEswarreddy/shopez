@@ -11,9 +11,11 @@ const { auth, adminAuth } = require("../middlewares/auth");
 const router = express.Router();
 
 // Create Razorpay order
+router.post("/create-razorpay-order", auth, createRazorpayOrder);
 router.post("/create-order", auth, createRazorpayOrder);
 
 // Verify payment
+router.post("/verify-razorpay", auth, verifyPayment);
 router.post("/verify", auth, verifyPayment);
 
 // Get payment details

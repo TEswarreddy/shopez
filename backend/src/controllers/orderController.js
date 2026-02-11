@@ -4,31 +4,54 @@ const Product = require("../models/Product");
 // Create order
 const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, totalAmount } = req.body;
 
+    console.log("\n=== ORDER CREATION START ===");
+    console.log("User ID:", req.user.id);
+    console.log("Items count:", items?.length);
+    console.log("Shipping address:", JSON.stringify(shippingAddress));
+    console.log("Payment method:", paymentMethod);
+
+    // Validate request body
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "No items in order" });
     }
 
-    let totalAmount = 0;
+    if (!shippingAddress) {
+      return res.status(400).json({ message: "Shipping address is required" });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({ message: "Payment method is required" });
+    }
+
+    let calculatedTotal = 0;
     const orderItems = [];
 
+    // Process each item
     for (const item of items) {
+      console.log(`Processing item: ${item.product}`);
+      
       const product = await Product.findById(item.product);
 
       if (!product) {
-        return res.status(404).json({ message: `Product ${item.product} not found` });
+        console.error(`Product not found: ${item.product}`);
+        return res.status(404).json({ message: `Product not found: ${item.product}` });
       }
+
+      console.log(`Product found: ${product.name}, Stock: ${product.stock}`);
 
       if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+        return res.status(400).json({ 
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
+        });
       }
 
-      totalAmount += product.price * item.quantity;
+      calculatedTotal += product.price * item.quantity;
 
       orderItems.push({
-        product: item.product,
-        vendor: product.vendor,
+        product: product._id,
+        vendor: product.vendor || null,
         quantity: item.quantity,
         price: product.price,
       });
@@ -36,25 +59,58 @@ const createOrder = async (req, res) => {
       // Reduce stock
       product.stock -= item.quantity;
       await product.save();
+      console.log(`Stock updated for ${product.name}: ${product.stock}`);
     }
 
-    const order = new Order({
+    console.log("Creating order document...");
+
+    const orderData = {
+      orderNumber: `ORD-${Date.now()}`,
       customer: req.user.id,
       items: orderItems,
-      totalAmount,
-      shippingAddress,
+      totalAmount: totalAmount || calculatedTotal,
+      shippingAddress: {
+        fullName: shippingAddress.fullName,
+        phone: shippingAddress.phone,
+        street: shippingAddress.street,
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        postalCode: shippingAddress.postalCode,
+        country: shippingAddress.country,
+      },
       paymentMethod,
-    });
+      status: "pending",
+      paymentStatus: "pending",
+    };
 
+    const order = new Order(orderData);
     await order.save();
+    
+    console.log("✅ Order saved successfully:", order._id);
 
     res.status(201).json({
       success: true,
       message: "Order created successfully",
-      order,
+      order: {
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        items: order.items,
+        totalAmount: order.totalAmount,
+        shippingAddress: order.shippingAddress,
+        paymentMethod: order.paymentMethod,
+        status: order.status,
+        createdAt: order.createdAt,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("\n❌ ERROR in createOrder:");
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
+    
+    res.status(500).json({ 
+      message: `Server error: ${error.message}`,
+      details: process.env.NODE_ENV === 'development' ? error.toString() : undefined 
+    });
   }
 };
 

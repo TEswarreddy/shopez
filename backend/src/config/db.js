@@ -17,13 +17,20 @@ const connectDB = async () => {
       throw new Error("Neither MONGODB_URI nor MONGO_URI is set in environment variables");
     }
     
+    console.log("Connecting to MongoDB...");
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
       family: 4
     });
-    console.log("MongoDB connected successfully ✅");
+    console.log("✅ MongoDB connected successfully");
   } catch (error) {
-    console.error("MongoDB connection failed ❌", error.message);
+    console.error("❌ MongoDB connection failed:", error.message);
+    console.error("\nTroubleshooting tips:");
+    console.error("1. Check your internet connection");
+    console.error("2. Verify MONGODB_URI in .env file");
+    console.error("3. Ensure MongoDB Atlas IP whitelist includes your IP");
+    console.error("4. Check MongoDB Atlas cluster status\n");
     process.exit(1);
   }
 };

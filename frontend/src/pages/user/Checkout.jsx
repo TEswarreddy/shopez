@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCart, clearCart } from "../../api/cartService"
 import { createOrder } from "../../api/orderService"
+import { initiateRazorpayPayment, verifyPayment, loadRazorpayScript } from "../../api/razorpayService"
 
 function Checkout() {
   const navigate = useNavigate()
@@ -10,6 +11,8 @@ function Checkout() {
   const [error, setError] = useState(null)
   const [placing, setPlacing] = useState(false)
   const [currentStep, setCurrentStep] = useState(1) // 1: Address, 2: Payment, 3: Review
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false)
+  const [paymentProcessing, setPaymentProcessing] = useState(false)
 
   // Form state
   const [shippingAddress, setShippingAddress] = useState({
@@ -29,9 +32,18 @@ function Checkout() {
 
   // Fetch cart from API
   useEffect(() => {
+    loadRazorpay()
     fetchCart()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const loadRazorpay = async () => {
+    const loaded = await loadRazorpayScript()
+    setRazorpayLoaded(loaded)
+    if (!loaded) {
+      console.error("Failed to load Razorpay script")
+    }
+  }
 
   const fetchCart = async () => {
     try {
@@ -123,27 +135,147 @@ function Checkout() {
     try {
       setPlacing(true)
       
+      // Validate one more time before submission
+      if (!validateAddress()) {
+        alert("Please check your shipping address for errors.")
+        setCurrentStep(1)
+        setPlacing(false)
+        return
+      }
+      
       const orderData = {
         items: cart.items.map(item => ({
           product: item.product._id,
           quantity: item.quantity,
           price: item.product.price,
         })),
-        shippingAddress,
+        shippingAddress: {
+          fullName: shippingAddress.fullName,
+          phone: shippingAddress.phone,
+          street: shippingAddress.street,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          postalCode: shippingAddress.zipCode,
+          country: shippingAddress.country,
+        },
         paymentMethod,
         totalAmount: total,
       }
 
-      const order = await createOrder(orderData)
-      
-      // Clear cart after successful order
-      await clearCart()
-      
-      // Navigate to order confirmation
-      navigate(`/orders`, { state: { newOrder: order } })
+      // If Razorpay payment, handle separately
+      if ((paymentMethod === "card" || paymentMethod === "razorpay") && razorpayLoaded) {
+        try {
+          console.log("Initiating Razorpay payment...")
+          setPaymentProcessing(true)
+          
+          // Get Razorpay order details
+          const razorpayDetails = await initiateRazorpayPayment({
+            ...orderData,
+            totalAmount: total
+          })
+
+          console.log("Razorpay details received:", razorpayDetails)
+
+          const options = {
+            key: razorpayDetails.key,
+            amount: razorpayDetails.amount,
+            currency: razorpayDetails.currency,
+            order_id: razorpayDetails.razorpayOrderId,
+            name: "ShopEz",
+            description: "Order Payment",
+            prefill: {
+              name: shippingAddress.fullName,
+              email: localStorage.getItem("userEmail") || "customer@shopez.com",
+              contact: shippingAddress.phone
+            },
+            handler: async (response) => {
+              try {
+                console.log("Payment successful, response:", response)
+                
+                // Verify payment on backend
+                const verificationResult = await verifyPayment({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  shippingAddress: orderData.shippingAddress,
+                  paymentMethod: "razorpay"
+                })
+
+                console.log("Payment verified:", verificationResult)
+
+                // Create order with payment confirmation
+                const finalOrderData = {
+                  ...orderData,
+                  paymentMethod: "razorpay",
+                  transactionId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id
+                }
+
+                const order = await createOrder(finalOrderData)
+                console.log("Order created successfully:", order)
+                
+                // Clear cart after successful order
+                await clearCart()
+                
+                // Navigate to order confirmation
+                navigate("/order-confirmation", { state: { order } })
+              } catch (err) {
+                console.error("Payment verification error:", err)
+                const errorMsg = err.response?.data?.message || err.message || "Payment verification failed"
+                alert(`Error: ${errorMsg}`)
+                setPaymentProcessing(false)
+                setPlacing(false)
+              }
+            },
+            theme: {
+              color: "#1f5fbf"
+            },
+            modal: {
+              ondismiss: () => {
+                console.log("Payment modal closed")
+                setPaymentProcessing(false)
+                setPlacing(false)
+              }
+            }
+          }
+
+          console.log("Opening Razorpay with options:", options)
+          
+          if (!window.Razorpay) {
+            throw new Error("Razorpay script not loaded properly")
+          }
+
+          const rzp = new window.Razorpay(options)
+          rzp.open()
+        } catch (err) {
+          console.error("Error initializing Razorpay:", err)
+          alert(`Razorpay Error: ${err.message}`)
+          setPaymentProcessing(false)
+          setPlacing(false)
+        }
+      } else {
+        // Non-Razorpay payments (COD, UPI, Wallet)
+        console.log("Sending order data:", orderData)
+        const order = await createOrder(orderData)
+        console.log("Order created successfully:", order)
+        
+        // Clear cart after successful order
+        await clearCart()
+        
+        // Navigate to order confirmation
+        navigate("/order-confirmation", { state: { order } })
+      }
     } catch (err) {
       console.error("Error placing order:", err)
-      alert(err.response?.data?.message || "Failed to place order. Please try again.")
+      console.error("Error response:", err.response?.data)
+      
+      const errorMsg = err.response?.data?.message || err.message || "Failed to place order. Please try again."
+      alert(`Order Failed: ${errorMsg}`)
+      
+      // If stock issue, refresh cart
+      if (errorMsg.includes("stock")) {
+        fetchCart()
+      }
     } finally {
       setPlacing(false)
     }
@@ -502,6 +634,37 @@ function Checkout() {
                       </div>
                     </div>
                   </label>
+
+                  {/* Razorpay (Card Payment) */}
+                  <label
+                    className={`flex cursor-pointer items-center gap-4 rounded-lg border-2 p-4 transition ${
+                      paymentMethod === "razorpay"
+                        ? "border-[#1f5fbf] bg-[#1f5fbf]/5"
+                        : "border-slate-200 hover:border-slate-300"
+                    } ${!razorpayLoaded ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => razorpayLoaded && setPaymentMethod("razorpay")}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={paymentMethod === "razorpay"}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      disabled={!razorpayLoaded}
+                      className="h-5 w-5 text-[#1f5fbf]"
+                    />
+                    <div className="flex flex-1 items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
+                        <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">Razorpay Secure Payment</p>
+                        <p className="text-sm text-slate-600">Card, UPI, Wallets - Secure & Fast</p>
+                      </div>
+                    </div>
+                  </label>
                 </div>
 
                 <div className="mt-6 flex gap-3">
@@ -565,12 +728,14 @@ function Checkout() {
                       {paymentMethod === "card" && "Credit/Debit Card"}
                       {paymentMethod === "upi" && "UPI Payment"}
                       {paymentMethod === "wallet" && "Digital Wallet"}
+                      {paymentMethod === "razorpay" && "Razorpay Secure Payment"}
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
                       {paymentMethod === "cod" && "Pay when you receive the order"}
                       {paymentMethod === "card" && "Visa, Mastercard, RuPay"}
                       {paymentMethod === "upi" && "Google Pay, PhonePe, Paytm"}
                       {paymentMethod === "wallet" && "Paytm, Amazon Pay, Mobikwik"}
+                      {paymentMethod === "razorpay" && "Secure Payment Gateway"}
                     </p>
                   </div>
                 </div>
@@ -603,16 +768,26 @@ function Checkout() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setCurrentStep(2)}
-                    className="flex-1 rounded-lg border-2 border-slate-200 py-4 font-semibold text-slate-700 transition hover:border-slate-300 hover:scale-105 active:scale-95"
+                    disabled={placing || paymentProcessing}
+                    className="flex-1 rounded-lg border-2 border-slate-200 py-4 font-semibold text-slate-700 transition hover:border-slate-300 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Back
                   </button>
                   <button
                     onClick={handlePlaceOrder}
-                    disabled={placing}
+                    disabled={placing || paymentProcessing}
                     className="flex-1 rounded-lg bg-[#f7d443] py-4 font-bold text-slate-900 transition hover:bg-[#f7d443]/90 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                   >
-                    {placing ? "Placing Order..." : "Place Order"}
+                    {paymentProcessing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent"></div>
+                        Processing Razorpay...
+                      </span>
+                    ) : placing ? (
+                      "Placing Order..."
+                    ) : (
+                      "Place Order"
+                    )}
                   </button>
                 </div>
               </div>

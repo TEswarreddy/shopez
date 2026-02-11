@@ -1,53 +1,99 @@
-# Razorpay Payment Integration Guide
+# Razorpay Payment Integration Guide - ShopEz
 
-## 🔐 Setup
+## ✅ Status: FULLY IMPLEMENTED
 
-### 1. Get Razorpay Credentials
-1. Sign up at https://razorpay.com
-2. Go to Dashboard → Settings → API Keys
-3. Generate Test/Live API Keys
-4. Copy Key ID and Key Secret
+This guide covers the complete Razorpay payment integration in ShopEz e-commerce platform.
 
-### 2. Update .env File
+## 🔐 Configuration
+
+### Environment Variables
+Ensure these are set in `.env`:
+
 ```env
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-RAZORPAY_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx  # Optional, for webhooks
+RAZORPAY_KEY_ID=rzp_test_SDZuVJeLueHBta
+RAZORPAY_KEY_SECRET=QsaSZIf4yl2G6gHM1i0LlKSB
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here  # Optional
 ```
 
-### 3. Install Razorpay Package
-```bash
-npm install
+## 📦 Implementation Overview
+
+### Frontend Components
+1. **razorpayService.js** - Utility functions for Razorpay integration
+   - `loadRazorpayScript()` - Loads Razorpay checkout script
+   - `initiateRazorpayPayment()` - Creates order and gets Razorpay details
+   - `verifyPayment()` - Verifies payment after transaction
+
+2. **Checkout.jsx** - Integration in checkout component
+   - Razorpay loaded on component mount
+   - Razorpay payment method option added
+   - Payment processing with Razorpay modal
+   - Automatic order creation after payment verification
+   - Loading states for better UX
+
+### Backend Components
+1. **paymentController.js** - Payment logic
+   - `createRazorpayOrder()` - Create Razorpay order with amount validation
+   - `verifyPayment()` - Verify payment signature using HMAC-SHA256
+   - `getPaymentDetails()` - Fetch payment info from Razorpay
+   - `refundPayment()` - Process refunds
+   - `handleWebhook()` - Handle Razorpay events
+
+2. **paymentRoutes.js** - API endpoints
+   - `POST /api/payment/create-razorpay-order`
+   - `POST /api/payment/verify-razorpay`
+   - `GET /api/payment/details/:paymentId`
+   - `POST /api/payment/refund`
+   - `POST /api/payment/webhook`
+
+3. **Order.js** - Database model updates
+   - Added `razorpayOrderId` field
+   - Updated `transactionId` for Razorpay payment IDs
+   - Enhanced `paymentStatus` tracking
+
+## 🧪 Testing with Test Credentials
+
+### Test Card
+```
+Card Number:   4111 1111 1111 1111
+Expiry Date:   12/25 (any future date)
+CVV:           123 (any 3 digits)
+Cardholder:    Any name
 ```
 
----
-
-## 📝 API Endpoints
-
-### 1. Create Razorpay Order
-**Endpoint:** `POST /api/payment/create-order`
-**Auth Required:** ✅ Yes
-
-**Request Body:**
-```json
-{
-  "amount": 999.99,
-  "currency": "INR",
-  "receipt": "receipt_order_123"
-}
+### Test UPI
+```
+UPI ID: success@razorpay
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "order": {
-    "id": "order_xxxxxxxxxxxxx",
-    "entity": "order",
-    "amount": 99999,
-    "amount_paid": 0,
-    "amount_due": 99999,
-    "currency": "INR",
+### Test Wallets
+- Google Pay
+- PhonePe
+- Paytm
+- Amazon Pay
+
+All available in Razorpay checkout modal.
+
+## 🚀 Payment Flow
+
+### Step 1: User Selects Razorpay
+- User chooses "Razorpay Secure Payment" in checkout
+- System verifies Razorpay script is loaded
+
+### Step 2: Create Order
+- Backend creates Razorpay order with amount in paise
+- Returns `razorpayOrderId` and public key to frontend
+
+### Step 3: Show Payment Modal
+- Razorpay checkout modal opens
+- User selects payment method and enters details
+- Razorpay processes payment securely (no data exposure)
+
+### Step 4: Handle Payment Success
+- Razorpay returns payment details to frontend
+- Frontend verifies payment locally
+
+### Step 5: Backend Verification
+``
     "receipt": "receipt_order_123",
     "status": "created"
   },

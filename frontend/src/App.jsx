@@ -11,6 +11,7 @@ import Register from "./pages/auth/Register"
 import Home from "./pages/user/Home"
 import Cart from "./pages/user/Cart"
 import Checkout from "./pages/user/Checkout"
+import OrderConfirmation from "./pages/user/OrderConfirmation"
 import Orders from "./pages/user/Orders"
 import Profile from "./pages/user/Profile"
 import Wishlist from "./pages/user/Wishlist"
@@ -78,6 +79,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/order-confirmation"
+            element={
+              <ProtectedRoute>
+                <OrderConfirmation />
               </ProtectedRoute>
             }
           />
