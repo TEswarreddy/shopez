@@ -48,13 +48,27 @@ const userSchema = new mongoose.Schema(
         default: false,
       },
     },
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      postalCode: String,
-      country: String,
-    },
+    addresses: [
+      {
+        _id: mongoose.Schema.Types.ObjectId,
+        fullName: String,
+        phone: String,
+        street: String,
+        city: String,
+        state: String,
+        postalCode: String,
+        country: String,
+        isDefault: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    defaultAddressId: mongoose.Schema.Types.ObjectId,
     profileImage: String,
     isActive: {
       type: Boolean,

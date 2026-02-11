@@ -4,13 +4,22 @@ const Product = require("../models/Product");
 // Create order
 const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod, totalAmount } = req.body;
+    const { 
+      items, 
+      shippingAddress, 
+      paymentMethod, 
+      totalAmount,
+      razorpayOrderId,
+      transactionId 
+    } = req.body;
 
     console.log("\n=== ORDER CREATION START ===");
     console.log("User ID:", req.user.id);
     console.log("Items count:", items?.length);
     console.log("Shipping address:", JSON.stringify(shippingAddress));
     console.log("Payment method:", paymentMethod);
+    console.log("Razorpay Order ID:", razorpayOrderId);
+    console.log("Transaction ID:", transactionId);
 
     // Validate request body
     if (!items || items.length === 0) {
@@ -79,9 +88,17 @@ const createOrder = async (req, res) => {
         country: shippingAddress.country,
       },
       paymentMethod,
-      status: "pending",
-      paymentStatus: "pending",
+      status: paymentMethod === "razorpay" && transactionId ? "confirmed" : "pending",
+      paymentStatus: paymentMethod === "razorpay" && transactionId ? "completed" : "pending",
     };
+
+    // Add Razorpay fields if provided
+    if (razorpayOrderId) {
+      orderData.razorpayOrderId = razorpayOrderId;
+    }
+    if (transactionId) {
+      orderData.transactionId = transactionId;
+    }
 
     const order = new Order(orderData);
     await order.save();
@@ -99,6 +116,8 @@ const createOrder = async (req, res) => {
         shippingAddress: order.shippingAddress,
         paymentMethod: order.paymentMethod,
         status: order.status,
+        razorpayOrderId: order.razorpayOrderId,
+        transactionId: order.transactionId,
         createdAt: order.createdAt,
       },
     });
