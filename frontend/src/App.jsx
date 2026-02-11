@@ -37,6 +37,9 @@ import Privacy from "./pages/policies/Privacy"
 
 // Vendor Pages
 import VendorDashboard from "./pages/restaurant/Dashboard"
+import VendorProducts from "./pages/vendor/Products"
+import VendorOrders from "./pages/vendor/Orders"
+import VendorAnalytics from "./pages/vendor/Analytics"
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard"
@@ -136,6 +139,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["vendor"]}>
                 <VendorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/products"
+            element={
+              <ProtectedRoute allowedRoles={["vendor"]}>
+                <VendorProducts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/orders"
+            element={
+              <ProtectedRoute allowedRoles={["vendor"]}>
+                <VendorOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/analytics"
+            element={
+              <ProtectedRoute allowedRoles={["vendor"]}>
+                <VendorAnalytics />
               </ProtectedRoute>
             }
           />
