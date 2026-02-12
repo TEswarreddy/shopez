@@ -43,6 +43,7 @@ import VendorAnalytics from "./pages/vendor/Analytics"
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard"
+import AdminAnalytics from "./pages/admin/Analytics"
 import AdminList from "./pages/admin/AdminList"
 import VendorManagement from "./pages/admin/VendorManagement"
 import CustomerManagement from "./pages/admin/CustomerManagement"
@@ -66,7 +67,8 @@ function App() {
           <Route path="/vendor/login" element={<VendorLogin />} />
           <Route path="/vendor/register" element={<VendorRegister />} />
           
-          {/* Hidden Admin Login - Only accessible via direct URL */}
+          {/* Admin Login - Direct URL access */}
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin-access/login" element={<AdminLogin />} />
 
           {/* Info Pages */}
@@ -173,6 +175,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminAnalytics />
               </ProtectedRoute>
             }
           />

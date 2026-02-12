@@ -735,6 +735,303 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+// Get analytics data
+const getAnalytics = async (req, res) => {
+  try {
+    const { range = "monthly" } = req.query;
+
+    const admin = await Admin.findOne({ user: req.user.id });
+    if (!admin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    let groupBy;
+    let labelFormat;
+
+    switch (range) {
+      case "daily":
+        startDate.setDate(now.getDate() - 7);
+        groupBy = { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
+        labelFormat = (date) => new Date(date).toLocaleDateString("en-US", { weekday: "short" });
+        break;
+      case "weekly":
+        startDate.setDate(now.getDate() - 28);
+        groupBy = { $week: "$createdAt" };
+        labelFormat = (week) => `Week ${week}`;
+        break;
+      case "yearly":
+        startDate.setFullYear(now.getFullYear() - 2);
+        groupBy = { $year: "$createdAt" };
+        labelFormat = (year) => year.toString();
+        break;
+      case "monthly":
+      default:
+        startDate.setMonth(now.getMonth() - 12);
+        groupBy = { $dateToString: { format: "%Y-%m", date: "$createdAt" } };
+        labelFormat = (date) => new Date(date + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" });
+        break;
+    }
+
+    // Revenue trend
+    const revenueTrend = await Order.aggregate([
+      { 
+        $match: { 
+          paymentStatus: "completed",
+          createdAt: { $gte: startDate }
+        } 
+      },
+      {
+        $group: {
+          _id: groupBy,
+          value: { $sum: "$totalAmount" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // User growth trend - Show cumulative user counts
+    const userGrowthTrend = await Customer.aggregate([
+      {
+        $facet: {
+          allUsers: [
+            { $match: { createdAt: { $gte: startDate } } },
+            {
+              $group: {
+                _id: groupBy,
+                value: { $sum: 1 }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ],
+          totalBefore: [
+            { $match: { createdAt: { $lt: startDate } } },
+            { $count: "count" }
+          ]
+        }
+      },
+      {
+        $project: {
+          userGrowth: {
+            $let: {
+              vars: {
+                baseCount: { $ifNull: [{ $arrayElemAt: ["$totalBefore.count", 0] }, 0] }
+              },
+              in: {
+                $map: {
+                  input: "$allUsers",
+                  as: "item",
+                  in: {
+                    _id: "$$item._id",
+                    value: "$$item.value"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      { $unwind: "$userGrowth" },
+      { $replaceRoot: { newRoot: "$userGrowth" } }
+    ]);
+
+    // Order status breakdown
+    const orderStatusBreakdown = await Order.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Top products
+    const topProducts = await Order.aggregate([
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.product",
+          unitsSold: { $sum: "$items.quantity" },
+          revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+        }
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productInfo"
+        }
+      },
+      { $unwind: "$productInfo" },
+      {
+        $project: {
+          _id: 1,
+          name: "$productInfo.name",
+          unitsSold: 1,
+          revenue: 1
+        }
+      }
+    ]);
+
+    // Top vendors
+    const topVendors = await Order.aggregate([
+      { $match: { paymentStatus: "completed" } },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.vendor",
+          totalOrders: { $sum: 1 },
+          revenue: { $sum: { $multiply: ["$items.price", "$items.quantity"] } }
+        }
+      },
+      { $match: { _id: { $ne: null } } },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "vendors",
+          localField: "_id",
+          foreignField: "_id",
+          as: "vendorInfo"
+        }
+      },
+      { $unwind: { path: "$vendorInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "vendorInfo.user",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          businessName: { 
+            $ifNull: [
+              "$vendorInfo.businessName",
+              { $concat: [{ $ifNull: ["$userInfo.firstName", "Unknown"] }, " ", { $ifNull: ["$userInfo.lastName", "Vendor"] }] }
+            ]
+          },
+          totalOrders: 1,
+          revenue: 1
+        }
+      }
+    ]);
+
+    // Category distribution
+    const categoryDistribution = await Product.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 6 },
+      {
+        $project: {
+          name: "$_id",
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Calculate totals and growth
+    const totalRevenue = await Order.aggregate([
+      { $match: { paymentStatus: "completed" } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+    ]);
+
+    const totalOrders = await Order.countDocuments();
+    const totalUsers = await Customer.countDocuments();
+    const totalVendors = await Vendor.countDocuments({ verificationStatus: "verified" });
+
+    // Calculate growth percentages (comparing to previous period)
+    const previousPeriodStart = new Date(startDate);
+    previousPeriodStart.setTime(startDate.getTime() - (now.getTime() - startDate.getTime()));
+
+    const previousRevenue = await Order.aggregate([
+      { 
+        $match: { 
+          paymentStatus: "completed",
+          createdAt: { $gte: previousPeriodStart, $lt: startDate }
+        } 
+      },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+    ]);
+
+    const previousOrders = await Order.countDocuments({
+      createdAt: { $gte: previousPeriodStart, $lt: startDate }
+    });
+
+    const previousUsers = await Customer.countDocuments({
+      createdAt: { $gte: previousPeriodStart, $lt: startDate }
+    });
+
+    const currentRevenue = totalRevenue[0]?.total || 0;
+    const prevRevenue = previousRevenue[0]?.total || 1;
+    const revenueGrowth = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+
+    const currentOrders = await Order.countDocuments({
+      createdAt: { $gte: startDate }
+    });
+    const orderGrowth = previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
+
+    const currentUsers = await Customer.countDocuments({
+      createdAt: { $gte: startDate }
+    });
+    const userGrowth = previousUsers > 0 ? ((currentUsers - previousUsers) / previousUsers) * 100 : 0;
+
+    console.log('Analytics generated:', {
+      revenueTrendPoints: revenueTrend.length,
+      userGrowthTrendPoints: userGrowthTrend.length,
+      topProductsCount: topProducts.length,
+      topVendorsCount: topVendors.length,
+      totalUsers,
+      totalVendors,
+      vendorData: topVendors.map(v => ({ id: v._id, name: v.businessName, orders: v.totalOrders }))
+    });
+
+    res.json({
+      success: true,
+      analytics: {
+        revenueTrend: revenueTrend.map(item => ({
+          label: labelFormat(item._id),
+          value: item.value
+        })),
+        userGrowthTrend: userGrowthTrend.map(item => ({
+          label: labelFormat(item._id),
+          value: item.value
+        })),
+        orderStatusBreakdown: orderStatusBreakdown.map(item => ({
+          name: item._id,
+          count: item.count
+        })),
+        topProducts,
+        topVendors,
+        categoryDistribution,
+        totalRevenue: currentRevenue,
+        totalOrders,
+        totalUsers,
+        totalVendors,
+        revenueGrowth: isFinite(revenueGrowth) ? revenueGrowth : 0,
+        orderGrowth: isFinite(orderGrowth) ? orderGrowth : 0,
+        userGrowth: isFinite(userGrowth) ? userGrowth : 0,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   // Admin Management
   createAdmin,
@@ -765,4 +1062,5 @@ module.exports = {
   // Dashboard & Orders
   getDashboardStats,
   getAllOrders,
+  getAnalytics,
 };

@@ -29,6 +29,7 @@ const {
   // Dashboard & Orders
   getDashboardStats,
   getAllOrders,
+  getAnalytics,
 } = require("../controllers/adminController");
 const { auth, adminAuth } = require("../middlewares/auth");
 
@@ -72,6 +73,7 @@ router.put("/products/:productId/feature", adminAuth, featureProduct);
 // DASHBOARD & ORDERS ROUTES
 // ===================================
 router.get("/dashboard/stats", adminAuth, getDashboardStats);
+router.get("/analytics", adminAuth, getAnalytics);
 router.get("/orders", adminAuth, getAllOrders);
 
 module.exports = router;
