@@ -25,7 +25,7 @@ const getProducts = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const products = await Product.find(filter)
-      .populate("vendor", "firstName lastName shop")
+      .populate("vendor", "firstName lastName storeName")
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
@@ -50,7 +50,7 @@ const getProducts = async (req, res) => {
 const getProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
-      .populate("vendor", "firstName lastName shop ratings")
+      .populate("vendor", "firstName lastName storeName rating")
       .populate("reviews");
 
     if (!product) {

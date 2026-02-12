@@ -18,7 +18,7 @@ function VendorManagement() {
     businessEmail: "",
     storeName: "",
     businessCategory: "",
-    commission: ""
+    commissionRate: ""
   })
 
   useEffect(() => {
@@ -152,7 +152,7 @@ function VendorManagement() {
           businessEmail: "",
           storeName: "",
           businessCategory: "",
-          commission: ""
+          commissionRate: ""
         })
         alert("Vendor updated successfully!")
       }
@@ -173,7 +173,7 @@ function VendorManagement() {
         businessEmail: vendor.businessEmail || "",
         storeName: vendor.storeName || "",
         businessCategory: vendor.businessCategory || "",
-        commission: vendor.commission || ""
+        commissionRate: vendor.commissionRate || ""
       })
     }
     
@@ -192,7 +192,7 @@ function VendorManagement() {
       businessEmail: "",
       storeName: "",
       businessCategory: "",
-      commission: ""
+      commissionRate: ""
     })
   }
 
@@ -273,9 +273,9 @@ function VendorManagement() {
                       {vendor.storeName || "N/A"}
                     </td>
                     <td className="px-6 py-4">
-                      {vendor.user?.firstName} {vendor.user?.lastName}
+                      {vendor.firstName} {vendor.lastName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{vendor.user?.email}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{vendor.email}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -353,7 +353,7 @@ function VendorManagement() {
             </h2>
 
             <p className="text-slate-600 mb-4">
-              {selectedVendor.user?.firstName} {selectedVendor.user?.lastName} (
+              {selectedVendor.firstName} {selectedVendor.lastName} (
               {selectedVendor.storeName})
             </p>
 
@@ -439,8 +439,8 @@ function VendorManagement() {
                       step="0.1"
                       min="0"
                       max="100"
-                      value={editFormData.commission}
-                      onChange={(e) => setEditFormData({ ...editFormData, commission: e.target.value })}
+                      value={editFormData.commissionRate}
+                      onChange={(e) => setEditFormData({ ...editFormData, commissionRate: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                     />
                   </div>

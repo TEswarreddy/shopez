@@ -138,7 +138,7 @@ const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ customer: req.user.id })
       .populate("items.product")
-      .populate("items.vendor", "firstName lastName shop");
+      .populate("items.vendor", "firstName lastName storeName");
 
     res.json({ success: true, orders });
   } catch (error) {
@@ -152,7 +152,7 @@ const getOrder = async (req, res) => {
     const order = await Order.findById(req.params.id)
       .populate("customer")
       .populate("items.product")
-      .populate("items.vendor", "firstName lastName shop");
+      .populate("items.vendor", "firstName lastName storeName");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });

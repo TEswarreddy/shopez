@@ -1,11 +1,20 @@
-const User = require("../models/User");
+const CustomerAccount = require("../models/CustomerAccount");
 const mongoose = require("mongoose");
-const crypto = require("crypto");
 const asyncHandler = require("../middlewares/asyncHandler");
+
+const ensureCustomer = (req, res) => {
+  if (req.user.role !== "customer") {
+    res.status(403).json({ success: false, message: "Customer access required" });
+    return false;
+  }
+  return true;
+};
 
 // Get user profile
 exports.getProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id).select("-password");
   
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -19,6 +28,8 @@ exports.getProfile = asyncHandler(async (req, res) => {
 
 // Update user profile
 exports.updateProfile = asyncHandler(async (req, res) => {
+  if (!ensureCustomer(req, res)) return;
+
   const allowedFields = ["firstName", "lastName", "email", "phone"];
   const updates = {};
 
@@ -28,7 +39,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     }
   });
 
-  const user = await User.findByIdAndUpdate(req.user.id, updates, {
+  const user = await CustomerAccount.findByIdAndUpdate(req.user.id, updates, {
     new: true,
     runValidators: true,
   }).select("-password");
@@ -67,7 +78,9 @@ exports.changePassword = asyncHandler(async (req, res) => {
   }
 
   // Get user with password
-  const user = await User.findById(req.user.id).select("+password");
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id).select("+password");
 
   // Verify current password
   const isPasswordCorrect = await user.comparePassword(currentPassword);
@@ -101,7 +114,9 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await User.findByIdAndUpdate(
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findByIdAndUpdate(
     req.user.id,
     { profileImage },
     { new: true }
@@ -116,7 +131,9 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
 
 // Get user addresses
 exports.getAddresses = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user.id);
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -141,7 +158,9 @@ exports.addAddress = asyncHandler(async (req, res) => {
     });
   }
 
-  const user = await User.findById(req.user.id);
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -187,7 +206,9 @@ exports.updateAddress = asyncHandler(async (req, res) => {
   const { fullName, phone, street, city, state, postalCode, country } =
     req.body;
 
-  const user = await User.findById(req.user.id);
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -225,7 +246,9 @@ exports.updateAddress = asyncHandler(async (req, res) => {
 exports.deleteAddress = asyncHandler(async (req, res) => {
   const { addressId } = req.params;
 
-  const user = await User.findById(req.user.id);
+  if (!ensureCustomer(req, res)) return;
+
+  const user = await CustomerAccount.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });

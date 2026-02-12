@@ -8,6 +8,7 @@ function CustomerManagement() {
   const [error, setError] = useState("")
   const [search, setSearch] = useState("")
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showActionModal, setShowActionModal] = useState(false)
   const [actionType, setActionType] = useState("") // suspend, unsuspend
@@ -35,14 +36,14 @@ function CustomerManagement() {
 
   const handleSuspendCustomer = async () => {
     try {
-      const response = await axios.put(`/admin/customers/${selectedCustomer.user._id}/suspend`, {
+      const response = await axios.put(`/admin/customers/${selectedCustomer._id}/suspend`, {
         reason: "Suspended by admin",
       })
       if (response.data.success) {
         setCustomers(
           customers.map((c) =>
-            c.user._id === selectedCustomer.user._id
-              ? { ...c, user: { ...c.user, isActive: false } }
+            c._id === selectedCustomer._id
+              ? { ...c, isActive: false }
               : c
           )
         )
@@ -56,12 +57,12 @@ function CustomerManagement() {
 
   const handleUnsuspendCustomer = async () => {
     try {
-      const response = await axios.put(`/admin/customers/${selectedCustomer.user._id}/unsuspend`)
+      const response = await axios.put(`/admin/customers/${selectedCustomer._id}/unsuspend`)
       if (response.data.success) {
         setCustomers(
           customers.map((c) =>
-            c.user._id === selectedCustomer.user._id
-              ? { ...c, user: { ...c.user, isActive: true } }
+            c._id === selectedCustomer._id
+              ? { ...c, isActive: true }
               : c
           )
         )
@@ -75,9 +76,9 @@ function CustomerManagement() {
 
   const openDetailsModal = async (customer) => {
     try {
-      const response = await axios.get(`/admin/customers/${customer.user._id}`)
+      const response = await axios.get(`/admin/customers/${customer._id}`)
       if (response.data.success) {
-        setSelectedCustomer(response.data)
+        setSelectedCustomerDetails(response.data)
         setShowDetailsModal(true)
       }
     } catch (err) {
@@ -93,7 +94,7 @@ function CustomerManagement() {
 
   const closeDetailsModal = () => {
     setShowDetailsModal(false)
-    setSelectedCustomer(null)
+    setSelectedCustomerDetails(null)
   }
 
   const closeActionModal = () => {
@@ -175,31 +176,31 @@ function CustomerManagement() {
               ) : (
                 customers.map((customer) => (
                   <tr
-                    key={customer.user._id}
+                    key={customer._id}
                     className={`border-b border-slate-200 hover:bg-slate-50 ${
-                      !customer.user.isActive ? "opacity-60" : ""
+                      !customer.isActive ? "opacity-60" : ""
                     }`}
                   >
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      {customer.user.firstName} {customer.user.lastName}
+                      {customer.firstName} {customer.lastName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{customer.user.email}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{customer.email}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {customer.user.phone || "N/A"}
+                      {customer.phone || "N/A"}
                     </td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          customer.user.isActive
+                          customer.isActive
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {customer.user.isActive ? "Active" : "Suspended"}
+                        {customer.isActive ? "Active" : "Suspended"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {new Date(customer.user.createdAt).toLocaleDateString()}
+                      {new Date(customer.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
@@ -209,7 +210,7 @@ function CustomerManagement() {
                         >
                           View Details
                         </button>
-                        {customer.user.isActive ? (
+                        {customer.isActive ? (
                           <button
                             onClick={() => openActionModal(customer, "suspend")}
                             className="text-red-600 hover:text-red-800 text-sm font-medium"
@@ -235,7 +236,7 @@ function CustomerManagement() {
       </div>
 
       {/* Details Modal */}
-      {showDetailsModal && selectedCustomer && (
+      {showDetailsModal && selectedCustomerDetails && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-96 overflow-y-auto">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Customer Details</h2>
@@ -245,32 +246,32 @@ function CustomerManagement() {
                 <div>
                   <p className="text-sm text-slate-600">First Name</p>
                   <p className="text-lg font-medium text-slate-900">
-                    {selectedCustomer.user.firstName}
+                    {selectedCustomerDetails.customer.firstName}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Last Name</p>
                   <p className="text-lg font-medium text-slate-900">
-                    {selectedCustomer.user.lastName}
+                    {selectedCustomerDetails.customer.lastName}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Email</p>
-                  <p className="text-lg font-medium text-slate-900">{selectedCustomer.user.email}</p>
+                  <p className="text-lg font-medium text-slate-900">{selectedCustomerDetails.customer.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Phone</p>
                   <p className="text-lg font-medium text-slate-900">
-                    {selectedCustomer.user.phone || "N/A"}
+                    {selectedCustomerDetails.customer.phone || "N/A"}
                   </p>
                 </div>
               </div>
 
-              {selectedCustomer.recentOrders && selectedCustomer.recentOrders.length > 0 && (
+              {selectedCustomerDetails.recentOrders && selectedCustomerDetails.recentOrders.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-3">Recent Orders</h3>
                   <div className="space-y-2">
-                    {selectedCustomer.recentOrders.map((order) => (
+                    {selectedCustomerDetails.recentOrders.map((order) => (
                       <div key={order._id} className="p-3 bg-slate-50 rounded-lg">
                         <p className="text-sm font-medium text-slate-900">
                           Order #{order._id.slice(-6).toUpperCase()}
@@ -304,8 +305,8 @@ function CustomerManagement() {
             </h2>
 
             <p className="text-slate-600 mb-6">
-              {selectedCustomer.user.firstName} {selectedCustomer.user.lastName} (
-              {selectedCustomer.user.email})
+              {selectedCustomer.firstName} {selectedCustomer.lastName} (
+              {selectedCustomer.email})
             </p>
 
             {actionType === "suspend" && (

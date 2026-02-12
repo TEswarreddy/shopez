@@ -33,7 +33,7 @@ const productSchema = new mongoose.Schema(
     images: [String],
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "VendorAccount",
       required: true,
     },
     ratings: {

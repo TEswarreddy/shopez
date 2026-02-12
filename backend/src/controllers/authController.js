@@ -1,68 +1,120 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const Customer = require("../models/Customer");
-const Vendor = require("../models/Vendor");
-const Admin = require("../models/Admin");
+const CustomerAccount = require("../models/CustomerAccount");
+const VendorAccount = require("../models/VendorAccount");
+const AdminAccount = require("../models/AdminAccount");
+
+const accountModels = {
+  customer: CustomerAccount,
+  vendor: VendorAccount,
+  admin: AdminAccount,
+};
+
+const findExistingAccountByEmail = async (email) => {
+  const [customer, vendor, admin] = await Promise.all([
+    CustomerAccount.findOne({ email }),
+    VendorAccount.findOne({ email }),
+    AdminAccount.findOne({ email }),
+  ]);
+
+  if (customer) return { account: customer, role: "customer" };
+  if (vendor) return { account: vendor, role: "vendor" };
+  if (admin) return { account: admin, role: "admin" };
+
+  return null;
+};
+
+const buildUserPayload = (account) => ({
+  id: account._id,
+  firstName: account.firstName,
+  lastName: account.lastName,
+  email: account.email,
+  phone: account.phone,
+  role: account.role,
+  profileImage: account.profileImage,
+  isEmailVerified: account.isEmailVerified,
+  isActive: account.isActive,
+});
+
+const attachRolePayload = (userPayload, account) => {
+  if (account.role === "customer") {
+    userPayload.customer = {
+      id: account._id,
+      loyaltyPoints: account.loyaltyPoints,
+      totalOrders: account.totalOrders,
+      defaultAddressId: account.defaultAddressId,
+      preferences: account.preferences,
+    };
+  }
+
+  if (account.role === "vendor") {
+    userPayload.vendor = {
+      id: account._id,
+      businessName: account.businessName,
+      storeName: account.storeName,
+      storeSlug: account.storeSlug,
+      verificationStatus: account.verificationStatus,
+      isVerified: account.isVerified,
+      onboardingCompleted: account.onboardingCompleted,
+      onboardingStep: account.onboardingStep,
+      rating: account.rating,
+      isActive: account.isActive,
+      isSuspended: account.isSuspended,
+    };
+  }
+
+  if (account.role === "admin") {
+    userPayload.admin = {
+      id: account._id,
+      adminLevel: account.adminLevel,
+      department: account.department,
+      permissions: account.permissions,
+      isActive: account.isActive,
+    };
+  }
+
+  return userPayload;
+};
 
 // Customer Signup
 const customerSignup = async (req, res) => {
   try {
     const { firstName, lastName, email, password, phone } = req.body;
 
-    // Validate input
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ message: "Please provide all required fields" });
     }
 
-    // Check if user exists
-    let user = await User.findOne({ email });
-    if (user) {
+    const existing = await findExistingAccountByEmail(email);
+    if (existing) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create user
-    user = new User({
+    const customer = new CustomerAccount({
       firstName,
       lastName,
       email,
       password,
       phone,
       role: "customer",
-    });
-
-    await user.save();
-
-    // Create customer profile
-    const customer = new Customer({
-      user: user._id,
       preferences: {
         newsletter: true,
         orderUpdates: true,
-        promotions: false
-      }
+        promotions: false,
+      },
     });
 
     await customer.save();
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: customer._id, role: customer.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE,
     });
+
+    const user = attachRolePayload(buildUserPayload(customer), customer);
 
     res.status(201).json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        customer: {
-          id: customer._id,
-          loyaltyPoints: customer.loyaltyPoints
-        }
-      },
+      user,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -72,14 +124,11 @@ const customerSignup = async (req, res) => {
 // Vendor Signup
 const vendorSignup = async (req, res) => {
   try {
-    console.log('Vendor signup request received');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      password, 
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
       phone,
       businessName,
       businessType,
@@ -94,52 +143,33 @@ const vendorSignup = async (req, res) => {
       alternatePhone,
       pickupAddress,
       storeName,
-      storeDescription
+      storeDescription,
     } = req.body;
 
-    // Validate required fields
     if (!firstName || !lastName || !email || !password || !businessName || !businessType || !businessPhone || !panNumber) {
-      console.log('Missing required fields');
       return res.status(400).json({ message: "Please provide all required fields" });
     }
 
-    // Validate business address
     if (!businessAddress || !businessAddress.street || !businessAddress.city || !businessAddress.state || !businessAddress.postalCode) {
-      console.log('Invalid business address:', businessAddress);
       return res.status(400).json({ message: "Please provide complete business address" });
     }
 
-    // Validate bank details
     if (!bankDetails || !bankDetails.accountHolderName || !bankDetails.accountNumber || !bankDetails.ifscCode) {
-      console.log('Invalid bank details:', bankDetails);
       return res.status(400).json({ message: "Please provide complete bank details" });
     }
 
-    // Check if user exists
-    let user = await User.findOne({ email });
-    if (user) {
-      console.log('User already exists:', email);
+    const existing = await findExistingAccountByEmail(email);
+    if (existing) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    console.log('Creating user...');
-    // Create user
-    user = new User({
+    const vendor = new VendorAccount({
       firstName,
       lastName,
       email,
       password,
       phone,
       role: "vendor",
-    });
-
-    await user.save();
-    console.log('User created:', user._id);
-
-    console.log('Creating vendor profile...');
-    // Create vendor profile
-    const vendor = new Vendor({
-      user: user._id,
       businessName,
       businessType,
       businessPhone,
@@ -155,39 +185,24 @@ const vendorSignup = async (req, res) => {
       storeDescription,
       gstNumber,
       verificationStatus: "pending",
-      onboardingStep: 1
+      onboardingStep: 1,
     });
 
     await vendor.save();
-    console.log('Vendor created:', vendor._id);
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: vendor._id, role: vendor.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE,
     });
+
+    const user = attachRolePayload(buildUserPayload(vendor), vendor);
 
     res.status(201).json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        vendor: {
-          id: vendor._id,
-          businessName: vendor.businessName,
-          verificationStatus: vendor.verificationStatus,
-          onboardingStep: vendor.onboardingStep,
-          storeSlug: vendor.storeSlug
-        }
-      },
-      message: "Vendor account created. Verification is pending."
+      user,
+      message: "Vendor account created. Verification is pending.",
     });
   } catch (error) {
-    console.error('❌ Vendor signup error:', error);
-    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message });
   }
 };
@@ -197,19 +212,21 @@ const signup = async (req, res) => {
   try {
     const { firstName, lastName, email, password, role = "customer" } = req.body;
 
-    // Validate input
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ message: "Please provide all required fields" });
     }
 
-    // Check if user exists
-    let user = await User.findOne({ email });
-    if (user) {
+    if (!accountModels[role]) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const existing = await findExistingAccountByEmail(email);
+    if (existing) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create user
-    user = new User({
+    const AccountModel = accountModels[role];
+    const account = new AccountModel({
       firstName,
       lastName,
       email,
@@ -217,23 +234,18 @@ const signup = async (req, res) => {
       role,
     });
 
-    await user.save();
+    await account.save();
 
-    // Generate JWT
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: account._id, role: account.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE,
     });
+
+    const user = attachRolePayload(buildUserPayload(account), account);
 
     res.status(201).json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-      },
+      user,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -249,99 +261,60 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "Please provide email and password" });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    let account = null;
+    let accountRole = role;
 
-    if (!user) {
+    if (role && accountModels[role]) {
+      account = await accountModels[role].findOne({ email }).select("+password");
+    } else {
+      const found = await findExistingAccountByEmail(email);
+      account = found?.account || null;
+      accountRole = found?.role || null;
+      if (account) {
+        account = await accountModels[accountRole].findById(account._id).select("+password");
+      }
+    }
+
+    if (!account) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Check if account is active
-    if (!user.isActive) {
+    if (!account.isActive) {
       return res.status(403).json({ message: "Account is deactivated" });
     }
 
-    // Check if account is locked
-    if (user.isLocked) {
+    if (account.isLocked) {
       return res.status(423).json({ message: "Account is locked due to too many failed login attempts. Please try again later." });
     }
 
-    // Check if logging in with correct role
-    if (role && user.role !== role) {
-      await user.incLoginAttempts();
+    if (role && account.role !== role) {
+      await account.incLoginAttempts();
       return res.status(403).json({ message: `This account is not registered as a ${role}` });
     }
 
-    const isPasswordCorrect = await user.comparePassword(password);
+    const isPasswordCorrect = await account.comparePassword(password);
 
     if (!isPasswordCorrect) {
-      await user.incLoginAttempts();
+      await account.incLoginAttempts();
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Reset login attempts on successful login
-    await user.resetLoginAttempts();
+    await account.resetLoginAttempts();
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    if (account.role === "admin") {
+      await account.recordLogin();
+    }
+
+    const token = jwt.sign({ id: account._id, role: account.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE,
     });
 
-    const userData = {
-      id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role,
-      profileImage: user.profileImage,
-      isEmailVerified: user.isEmailVerified
-    };
-
-    // Populate role-specific data
-    if (user.role === "customer") {
-      const customer = await Customer.findOne({ user: user._id });
-      if (customer) {
-        userData.customer = {
-          id: customer._id,
-          loyaltyPoints: customer.loyaltyPoints,
-          totalOrders: customer.totalOrders,
-          defaultAddressId: customer.defaultAddressId,
-          preferences: customer.preferences
-        };
-      }
-    } else if (user.role === "vendor") {
-      const vendor = await Vendor.findOne({ user: user._id });
-      if (vendor) {
-        userData.vendor = {
-          id: vendor._id,
-          businessName: vendor.businessName,
-          storeName: vendor.storeName,
-          storeSlug: vendor.storeSlug,
-          verificationStatus: vendor.verificationStatus,
-          isVerified: vendor.isVerified,
-          onboardingCompleted: vendor.onboardingCompleted,
-          onboardingStep: vendor.onboardingStep,
-          rating: vendor.rating,
-          isActive: vendor.isActive,
-          isSuspended: vendor.isSuspended
-        };
-      }
-    } else if (user.role === "admin") {
-      const admin = await Admin.findOne({ user: user._id });
-      if (admin) {
-        await admin.recordLogin();
-        userData.admin = {
-          id: admin._id,
-          adminLevel: admin.adminLevel,
-          department: admin.department,
-          permissions: admin.permissions,
-          isActive: admin.isActive
-        };
-      }
-    }
+    const user = attachRolePayload(buildUserPayload(account), account);
 
     res.json({
       success: true,
       token,
-      user: userData,
+      user,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -351,46 +324,20 @@ const login = async (req, res) => {
 // Get Profile
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    
-    if (!user) {
+    const AccountModel = accountModels[req.user.role];
+    if (!AccountModel) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const account = await AccountModel.findById(req.user.id).select("-password");
+
+    if (!account) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const userData = {
-      id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      profileImage: user.profileImage,
-      isActive: user.isActive,
-      isEmailVerified: user.isEmailVerified,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    };
+    const user = attachRolePayload(buildUserPayload(account), account);
 
-    // Populate role-specific data
-    if (user.role === "customer") {
-      const customer = await Customer.findOne({ user: user._id });
-      if (customer) {
-        userData.customer = customer;
-      }
-    } else if (user.role === "vendor") {
-      const vendor = await Vendor.findOne({ user: user._id });
-      if (vendor) {
-        userData.vendor = vendor;
-      }
-    } else if (user.role === "admin") {
-      const admin = await Admin.findOne({ user: user._id });
-      if (admin) {
-        await admin.updateActivity();
-        userData.admin = admin;
-      }
-    }
-
-    res.json({ success: true, user: userData });
+    res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -399,10 +346,30 @@ const getProfile = async (req, res) => {
 // Update Profile
 const updateProfile = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.user.id, req.body, {
+    const AccountModel = accountModels[req.user.role];
+    if (!AccountModel) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const allowedFields = ["firstName", "lastName", "email", "phone", "profileImage"]; 
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    const account = await AccountModel.findByIdAndUpdate(req.user.id, updates, {
       new: true,
       runValidators: true,
-    });
+    }).select("-password");
+
+    if (!account) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = attachRolePayload(buildUserPayload(account), account);
 
     res.json({
       success: true,

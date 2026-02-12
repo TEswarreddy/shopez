@@ -1,8 +1,7 @@
 // Simple test endpoint to verify Razorpay connection
 const express = require("express")
 const Razorpay = require("razorpay")
-const User = require("../models/User")
-const Admin = require("../models/Admin")
+const AdminAccount = require("../models/AdminAccount")
 require("dotenv").config()
 
 const router = express.Router()
@@ -17,10 +16,9 @@ router.post("/create-admin", async (req, res) => {
     console.log("\n🔐 Creating super admin...")
 
     // Check if already exists
-    let user = await User.findOne({ email: 'superadmin@shopez.com' })
-    if (user) {
-      const admin = await Admin.findOne({ user: user._id })
-      if (admin) {
+    let adminAccount = await AdminAccount.findOne({ email: 'superadmin@shopez.com' })
+    if (adminAccount) {
+      if (adminAccount.adminLevel === "super_admin") {
         return res.json({
           success: true,
           message: "Super admin already exists",
@@ -29,23 +27,12 @@ router.post("/create-admin", async (req, res) => {
       }
     }
 
-    // Create user
-    if (!user) {
-      user = await User.create({
-        firstName: 'Super',
-        lastName: 'Admin',
-        email: 'superadmin@shopez.com',
-        password: 'admin123',
-        role: 'admin',
-        isEmailVerified: true,
-        isActive: true
-      })
-      console.log('✅ User created')
-    }
-
-    // Create admin profile
-    const admin = await Admin.create({
-      user: user._id,
+    adminAccount = await AdminAccount.create({
+      firstName: 'Super',
+      lastName: 'Admin',
+      email: 'superadmin@shopez.com',
+      password: 'admin123',
+      role: 'admin',
       adminLevel: 'super_admin',
       department: 'management',
       employeeId: 'SA001',
@@ -73,9 +60,10 @@ router.post("/create-admin", async (req, res) => {
         canViewLogs: true,
         canManageAdmins: true,
       },
-      isActive: true
+      isEmailVerified: true,
+      isActive: true,
     })
-    console.log('✅ Admin profile created')
+    console.log('✅ Admin account created')
 
     res.json({
       success: true,

@@ -84,17 +84,17 @@ function AdminList() {
     
     // Set permissions from admin object
     const adminPermissions = {
-      canManageUsers: admin.permissions?.canManageUsers || admin.canManageUsers || false,
-      canManageVendors: admin.permissions?.canManageVendors || admin.canManageVendors || false,
-      canVerifyVendors: admin.permissions?.canVerifyVendors || admin.canVerifyVendors || false,
-      canManageProducts: admin.permissions?.canManageProducts || admin.canManageProducts || false,
-      canDeleteProducts: admin.permissions?.canDeleteProducts || admin.canDeleteProducts || false,
-      canFeatureProducts: admin.permissions?.canFeatureProducts || admin.canFeatureProducts || false,
-      canManageOrders: admin.permissions?.canManageOrders || admin.canManageOrders || false,
-      canSuspendVendors: admin.permissions?.canSuspendVendors || admin.canSuspendVendors || false,
-      canSuspendUsers: admin.permissions?.canSuspendUsers || admin.canSuspendUsers || false,
-      canDeleteVendors: admin.permissions?.canDeleteVendors || admin.canDeleteVendors || false,
-      canViewFinancials: admin.permissions?.canViewFinancials || admin.canViewFinancials || false,
+      canManageUsers: admin.permissions?.canManageUsers || false,
+      canManageVendors: admin.permissions?.canManageVendors || false,
+      canVerifyVendors: admin.permissions?.canVerifyVendors || false,
+      canManageProducts: admin.permissions?.canManageProducts || false,
+      canDeleteProducts: admin.permissions?.canDeleteProducts || false,
+      canFeatureProducts: admin.permissions?.canFeatureProducts || false,
+      canManageOrders: admin.permissions?.canManageOrders || false,
+      canSuspendVendors: admin.permissions?.canSuspendVendors || false,
+      canSuspendUsers: admin.permissions?.canSuspendUsers || false,
+      canDeleteVendors: admin.permissions?.canDeleteVendors || false,
+      canViewFinancials: admin.permissions?.canViewFinancials || false,
     }
     setEditPermissions(adminPermissions)
     setShowEditModal(true)
@@ -143,7 +143,7 @@ function AdminList() {
     try {
       const response = await axios.post("/admin/admins", {
         ...formData,
-        ...permissions,
+        permissions,
       })
       if (response.data.success) {
         setAdmins([...admins, response.data.admin])
@@ -351,10 +351,10 @@ function AdminList() {
                   <tr key={admin._id} className="border-b border-slate-200 hover:bg-slate-50">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-900">
-                        {admin.user?.firstName} {admin.user?.lastName}
+                        {admin.firstName} {admin.lastName}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{admin.user?.email}</td>
+                    <td className="px-6 py-4 text-slate-600">{admin.email}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -391,10 +391,10 @@ function AdminList() {
               
               <div className="mb-4 p-4 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-600">
-                  <strong>Name:</strong> {selectedAdmin.user?.firstName} {selectedAdmin.user?.lastName}
+                  <strong>Name:</strong> {selectedAdmin.firstName} {selectedAdmin.lastName}
                 </p>
                 <p className="text-sm text-slate-600">
-                  <strong>Email:</strong> {selectedAdmin.user?.email}
+                  <strong>Email:</strong> {selectedAdmin.email}
                 </p>
               </div>
 

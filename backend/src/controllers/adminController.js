@@ -1,7 +1,6 @@
-const User = require("../models/User");
-const Admin = require("../models/Admin");
-const Customer = require("../models/Customer");
-const Vendor = require("../models/Vendor");
+const AdminAccount = require("../models/AdminAccount");
+const CustomerAccount = require("../models/CustomerAccount");
+const VendorAccount = require("../models/VendorAccount");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 
@@ -15,37 +14,35 @@ const createAdmin = async (req, res) => {
     const { email, password, firstName, lastName, adminLevel, permissions } = req.body;
 
     // Check if requester is super admin
-    const requestingAdmin = await Admin.findOne({ user: req.user.id });
+    const requestingAdmin = await AdminAccount.findById(req.user.id);
     if (!requestingAdmin || requestingAdmin.adminLevel !== "super_admin") {
       return res.status(403).json({ message: "Only super admins can create other admins" });
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const [existingCustomer, existingVendor, existingAdmin] = await Promise.all([
+      CustomerAccount.findOne({ email }),
+      VendorAccount.findOne({ email }),
+      AdminAccount.findOne({ email }),
+    ]);
+    if (existingCustomer || existingVendor || existingAdmin) {
       return res.status(400).json({ message: "User with this email already exists" });
     }
 
-    // Create User account
-    const user = await User.create({
+    const admin = await AdminAccount.create({
       email,
       password,
       firstName,
       lastName,
       role: "admin",
-      isEmailVerified: true,
-      isActive: true
-    });
-
-    // Create Admin profile
-    const admin = await Admin.create({
-      user: user._id,
       adminLevel: adminLevel || "admin",
+      permissions: permissions || {},
       addedBy: req.user.id,
-      ...permissions // Spread permission flags
+      isEmailVerified: true,
+      isActive: true,
     });
 
-    const populatedAdmin = await Admin.findById(admin._id).populate("user", "firstName lastName email");
+    const populatedAdmin = await AdminAccount.findById(admin._id).select("-password");
 
     res.status(201).json({
       success: true,
@@ -74,7 +71,7 @@ const getAllAdmins = async (req, res) => {
     }
 
     // Only super admins can view all admins
-    const requestingAdmin = await Admin.findOne({ user: req.user.id });
+    const requestingAdmin = await AdminAccount.findById(req.user.id);
     
     console.log('Requesting admin:', requestingAdmin);
     
@@ -99,14 +96,14 @@ const getAllAdmins = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const admins = await Admin.find(filter)
-      .populate("user", "firstName lastName email isActive lastLogin")
+    const admins = await AdminAccount.find(filter)
+      .select("-password")
       .populate("addedBy", "firstName lastName email")
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
 
-    const total = await Admin.countDocuments(filter);
+    const total = await AdminAccount.countDocuments(filter);
 
     res.json({
       success: true,
@@ -133,18 +130,18 @@ const updateAdminPermissions = async (req, res) => {
     const { adminLevel, permissions } = req.body;
 
     // Only super admins can update permissions
-    const requestingAdmin = await Admin.findOne({ user: req.user.id });
+    const requestingAdmin = await AdminAccount.findById(req.user.id);
     if (!requestingAdmin || requestingAdmin.adminLevel !== "super_admin") {
       return res.status(403).json({ message: "Only super admins can update permissions" });
     }
 
-    const targetAdmin = await Admin.findById(adminId);
+    const targetAdmin = await AdminAccount.findById(adminId);
     if (!targetAdmin) {
       return res.status(404).json({ message: "Admin not found" });
     }
 
     // Prevent super admin from downgrading themselves
-    if (targetAdmin.user.toString() === req.user.id && adminLevel && adminLevel !== "super_admin") {
+    if (targetAdmin._id.toString() === req.user.id && adminLevel && adminLevel !== "super_admin") {
       return res.status(400).json({ message: "Cannot downgrade your own admin level" });
     }
 
@@ -152,13 +149,13 @@ const updateAdminPermissions = async (req, res) => {
     if (adminLevel) targetAdmin.adminLevel = adminLevel;
     if (permissions) {
       Object.keys(permissions).forEach(key => {
-        targetAdmin[key] = permissions[key];
+        targetAdmin.permissions[key] = permissions[key];
       });
     }
 
     await targetAdmin.save();
 
-    const updatedAdmin = await Admin.findById(adminId).populate("user", "firstName lastName email");
+    const updatedAdmin = await AdminAccount.findById(adminId).select("-password");
 
     res.json({
       success: true,
@@ -176,23 +173,23 @@ const deactivateAdmin = async (req, res) => {
     const { adminId } = req.params;
 
     // Only super admins can deactivate
-    const requestingAdmin = await Admin.findOne({ user: req.user.id });
+    const requestingAdmin = await AdminAccount.findById(req.user.id);
     if (!requestingAdmin || requestingAdmin.adminLevel !== "super_admin") {
       return res.status(403).json({ message: "Only super admins can deactivate admins" });
     }
 
-    const targetAdmin = await Admin.findById(adminId);
+    const targetAdmin = await AdminAccount.findById(adminId);
     if (!targetAdmin) {
       return res.status(404).json({ message: "Admin not found" });
     }
 
     // Prevent deactivating self
-    if (targetAdmin.user.toString() === req.user.id) {
+    if (targetAdmin._id.toString() === req.user.id) {
       return res.status(400).json({ message: "Cannot deactivate your own account" });
     }
 
-    // Deactivate the associated User account
-    await User.findByIdAndUpdate(targetAdmin.user, { isActive: false });
+    targetAdmin.isActive = false;
+    await targetAdmin.save();
 
     res.json({
       success: true,
@@ -212,7 +209,7 @@ const getAllVendors = async (req, res) => {
   try {
     const { page = 1, limit = 10, verificationStatus, isActive } = req.query;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageVendors")) {
       return res.status(403).json({ message: "No permission to manage vendors" });
     }
@@ -223,13 +220,12 @@ const getAllVendors = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const vendors = await Vendor.find(filter)
-      .populate("user", "firstName lastName email phone isActive")
+    const vendors = await VendorAccount.find(filter)
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
 
-    const total = await Vendor.countDocuments(filter);
+    const total = await VendorAccount.countDocuments(filter);
 
     res.json({
       success: true,
@@ -250,13 +246,12 @@ const getVendorDetails = async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageVendors")) {
       return res.status(403).json({ message: "No permission to view vendor details" });
     }
 
-    const vendor = await Vendor.findById(vendorId)
-      .populate("user", "firstName lastName email phone isActive createdAt");
+    const vendor = await VendorAccount.findById(vendorId);
 
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
@@ -276,12 +271,12 @@ const verifyVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canVerifyVendors")) {
       return res.status(403).json({ message: "No permission to verify vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -310,36 +305,49 @@ const updateVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageVendors")) {
       return res.status(403).json({ message: "No permission to update vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
     // Allowed fields for admin to update
     const allowedUpdates = [
-      'businessName', 'businessType', 'businessDescription', 'businessCategory',
-      'businessEmail', 'businessPhone', 'alternatePhone',
-      'businessAddress', 'pickupAddress',
-      'gstNumber', 'storeName', 'storeDescription',
-      'commission'
+      "businessName",
+      "businessType",
+      "businessDescription",
+      "businessCategory",
+      "businessEmail",
+      "businessPhone",
+      "alternatePhone",
+      "businessAddress",
+      "pickupAddress",
+      "gstNumber",
+      "storeName",
+      "storeDescription",
+      "commission",
+      "commissionRate",
     ];
 
     // Update only allowed fields
-    Object.keys(req.body).forEach(key => {
-      if (allowedUpdates.includes(key)) {
-        vendor[key] = req.body[key];
+    Object.keys(req.body).forEach((key) => {
+      if (!allowedUpdates.includes(key)) {
+        return;
       }
+      if (key === "commission") {
+        vendor.commissionRate = req.body[key];
+        return;
+      }
+      vendor[key] = req.body[key];
     });
 
     await vendor.save();
 
-    const updatedVendor = await Vendor.findById(vendorId)
-      .populate("user", "firstName lastName email phone");
+    const updatedVendor = await VendorAccount.findById(vendorId);
 
     res.json({
       success: true,
@@ -357,12 +365,12 @@ const rejectVendor = async (req, res) => {
     const { vendorId } = req.params;
     const { reason } = req.body;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canVerifyVendors")) {
       return res.status(403).json({ message: "No permission to reject vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -387,12 +395,12 @@ const suspendVendor = async (req, res) => {
     const { vendorId } = req.params;
     const { reason } = req.body;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canSuspendVendors")) {
       return res.status(403).json({ message: "No permission to suspend vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -400,10 +408,8 @@ const suspendVendor = async (req, res) => {
     vendor.isSuspended = true;
     vendor.suspensionReason = reason;
     vendor.suspendedAt = new Date();
+    vendor.isActive = false;
     await vendor.save();
-
-    // Also deactivate the User account
-    await User.findByIdAndUpdate(vendor.user, { isActive: false });
 
     res.json({
       success: true,
@@ -419,12 +425,12 @@ const unsuspendVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canSuspendVendors")) {
       return res.status(403).json({ message: "No permission to unsuspend vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -432,10 +438,8 @@ const unsuspendVendor = async (req, res) => {
     vendor.isSuspended = false;
     vendor.suspensionReason = undefined;
     vendor.suspendedAt = undefined;
+    vendor.isActive = true;
     await vendor.save();
-
-    // Reactivate the User account
-    await User.findByIdAndUpdate(vendor.user, { isActive: true });
 
     res.json({
       success: true,
@@ -451,18 +455,18 @@ const deleteVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canDeleteVendors")) {
       return res.status(403).json({ message: "No permission to delete vendors" });
     }
 
-    const vendor = await Vendor.findById(vendorId);
+    const vendor = await VendorAccount.findById(vendorId);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    // Soft delete by deactivating User account
-    await User.findByIdAndUpdate(vendor.user, { isActive: false });
+    vendor.isActive = false;
+    await vendor.save();
 
     res.json({
       success: true,
@@ -482,7 +486,7 @@ const getAllCustomers = async (req, res) => {
   try {
     const { page = 1, limit = 10, search } = req.query;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageUsers")) {
       return res.status(403).json({ message: "No permission to manage customers" });
     }
@@ -498,26 +502,17 @@ const getAllCustomers = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const users = await User.find(userFilter)
+    const customers = await CustomerAccount.find(userFilter)
       .select("-password")
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
 
-    const userIds = users.map(u => u._id);
-    const customers = await Customer.find({ user: { $in: userIds } });
-
-    const total = await User.countDocuments(userFilter);
+    const total = await CustomerAccount.countDocuments(userFilter);
 
     res.json({
       success: true,
-      customers: users.map(user => {
-        const customer = customers.find(c => c.user.toString() === user._id.toString());
-        return {
-          user,
-          customer
-        };
-      }),
+      customers,
       pagination: {
         total,
         pages: Math.ceil(total / limit),
@@ -534,24 +529,22 @@ const getCustomerDetails = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageUsers")) {
       return res.status(403).json({ message: "No permission to view customer details" });
     }
 
-    const user = await User.findById(userId).select("-password");
-    if (!user) {
+    const customer = await CustomerAccount.findById(userId).select("-password");
+    if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    const customer = await Customer.findOne({ user: userId });
     const recentOrders = await Order.find({ customer: userId })
       .limit(5)
       .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      user,
       customer,
       recentOrders
     });
@@ -566,14 +559,15 @@ const suspendCustomer = async (req, res) => {
     const { userId } = req.params;
     const { reason } = req.body;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canSuspendUsers")) {
       return res.status(403).json({ message: "No permission to suspend customers" });
     }
 
-    await User.findByIdAndUpdate(userId, { 
+    await CustomerAccount.findByIdAndUpdate(userId, { 
       isActive: false,
-      suspensionReason: reason 
+      suspensionReason: reason,
+      suspendedAt: new Date(),
     });
 
     res.json({
@@ -590,14 +584,14 @@ const unsuspendCustomer = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canSuspendUsers")) {
       return res.status(403).json({ message: "No permission to unsuspend customers" });
     }
 
-    await User.findByIdAndUpdate(userId, { 
+    await CustomerAccount.findByIdAndUpdate(userId, { 
       isActive: true,
-      $unset: { suspensionReason: "" }
+      $unset: { suspensionReason: "", suspendedAt: "" }
     });
 
     res.json({
@@ -661,7 +655,7 @@ const deleteProduct = async (req, res) => {
   try {
     const { productId } = req.params;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canDeleteProducts")) {
       return res.status(403).json({ message: "No permission to delete products" });
     }
@@ -683,7 +677,7 @@ const featureProduct = async (req, res) => {
     const { productId } = req.params;
     const { featured } = req.body;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canFeatureProducts")) {
       return res.status(403).json({ message: "No permission to feature products" });
     }
@@ -711,7 +705,7 @@ const featureProduct = async (req, res) => {
 // Get dashboard stats (permission-based visibility)
 const getDashboardStats = async (req, res) => {
   try {
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin) {
       return res.status(403).json({ message: "Admin profile not found" });
     }
@@ -720,15 +714,15 @@ const getDashboardStats = async (req, res) => {
 
     // Customer stats
     if (admin.hasPermission("canManageUsers")) {
-      stats.totalCustomers = await User.countDocuments({ role: "customer" });
-      stats.activeCustomers = await User.countDocuments({ role: "customer", isActive: true });
+      stats.totalCustomers = await CustomerAccount.countDocuments();
+      stats.activeCustomers = await CustomerAccount.countDocuments({ isActive: true });
     }
 
     // Vendor stats
     if (admin.hasPermission("canManageVendors")) {
-      stats.totalVendors = await Vendor.countDocuments();
-      stats.verifiedVendors = await Vendor.countDocuments({ verificationStatus: "verified" });
-      stats.pendingVendors = await Vendor.countDocuments({ verificationStatus: "pending" });
+      stats.totalVendors = await VendorAccount.countDocuments();
+      stats.verifiedVendors = await VendorAccount.countDocuments({ verificationStatus: "verified" });
+      stats.pendingVendors = await VendorAccount.countDocuments({ verificationStatus: "pending" });
     }
 
     // Product stats
@@ -754,8 +748,8 @@ const getDashboardStats = async (req, res) => {
 
     // Admin stats (super admin only)
     if (admin.adminLevel === "super_admin") {
-      stats.totalAdmins = await Admin.countDocuments();
-      stats.activeAdmins = await Admin.countDocuments({ "user.isActive": true });
+      stats.totalAdmins = await AdminAccount.countDocuments();
+      stats.activeAdmins = await AdminAccount.countDocuments({ isActive: true });
     }
 
     res.json({
@@ -776,7 +770,7 @@ const getAllOrders = async (req, res) => {
   try {
     const { status, paymentStatus, page = 1, limit = 10 } = req.query;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin || !admin.hasPermission("canManageOrders")) {
       return res.status(403).json({ message: "No permission to manage orders" });
     }
@@ -816,7 +810,7 @@ const getAnalytics = async (req, res) => {
   try {
     const { range = "monthly" } = req.query;
 
-    const admin = await Admin.findOne({ user: req.user.id });
+    const admin = await AdminAccount.findById(req.user.id);
     if (!admin) {
       return res.status(403).json({ message: "Admin access required" });
     }
@@ -869,7 +863,7 @@ const getAnalytics = async (req, res) => {
     ]);
 
     // User growth trend - Show cumulative user counts
-    const userGrowthTrend = await Customer.aggregate([
+    const userGrowthTrend = await CustomerAccount.aggregate([
       {
         $facet: {
           allUsers: [
@@ -970,7 +964,7 @@ const getAnalytics = async (req, res) => {
       { $limit: 5 },
       {
         $lookup: {
-          from: "vendors",
+          from: "vendoraccounts",
           localField: "_id",
           foreignField: "_id",
           as: "vendorInfo"
@@ -978,21 +972,12 @@ const getAnalytics = async (req, res) => {
       },
       { $unwind: { path: "$vendorInfo", preserveNullAndEmptyArrays: true } },
       {
-        $lookup: {
-          from: "users",
-          localField: "vendorInfo.user",
-          foreignField: "_id",
-          as: "userInfo"
-        }
-      },
-      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
-      {
         $project: {
           _id: 1,
           businessName: { 
             $ifNull: [
               "$vendorInfo.businessName",
-              { $concat: [{ $ifNull: ["$userInfo.firstName", "Unknown"] }, " ", { $ifNull: ["$userInfo.lastName", "Vendor"] }] }
+              "$vendorInfo.storeName"
             ]
           },
           totalOrders: 1,
@@ -1027,8 +1012,8 @@ const getAnalytics = async (req, res) => {
     ]);
 
     const totalOrders = await Order.countDocuments();
-    const totalUsers = await Customer.countDocuments();
-    const totalVendors = await Vendor.countDocuments({ verificationStatus: "verified" });
+    const totalUsers = await CustomerAccount.countDocuments();
+    const totalVendors = await VendorAccount.countDocuments({ verificationStatus: "verified" });
 
     // Calculate growth percentages (comparing to previous period)
     const previousPeriodStart = new Date(startDate);
@@ -1048,7 +1033,7 @@ const getAnalytics = async (req, res) => {
       createdAt: { $gte: previousPeriodStart, $lt: startDate }
     });
 
-    const previousUsers = await Customer.countDocuments({
+    const previousUsers = await CustomerAccount.countDocuments({
       createdAt: { $gte: previousPeriodStart, $lt: startDate }
     });
 
@@ -1061,7 +1046,7 @@ const getAnalytics = async (req, res) => {
     });
     const orderGrowth = previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
 
-    const currentUsers = await Customer.countDocuments({
+    const currentUsers = await CustomerAccount.countDocuments({
       createdAt: { $gte: startDate }
     });
     const userGrowth = previousUsers > 0 ? ((currentUsers - previousUsers) / previousUsers) * 100 : 0;

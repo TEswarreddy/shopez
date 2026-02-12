@@ -1,6 +1,6 @@
 const Product = require("../models/Product");
 const Order = require("../models/Order");
-const User = require("../models/User");
+const VendorAccount = require("../models/VendorAccount");
 const asyncHandler = require("../middlewares/asyncHandler");
 const mongoose = require("mongoose");
 
@@ -58,7 +58,7 @@ exports.getDashboardStats = asyncHandler(async (req, res) => {
 
 // Get vendor profile with shop settings
 exports.getVendorProfile = asyncHandler(async (req, res) => {
-  const vendor = await User.findById(req.user.id).select("-password");
+  const vendor = await VendorAccount.findById(req.user.id).select("-password");
 
   if (!vendor) {
     return res.status(404).json({ success: false, message: "Vendor not found" });
@@ -453,12 +453,12 @@ exports.updateShopSettings = asyncHandler(async (req, res) => {
   const { shopName, shopDescription, shopImage, phone } = req.body;
 
   const updates = {};
-  if (shopName) updates["shop.shopName"] = shopName;
-  if (shopDescription) updates["shop.shopDescription"] = shopDescription;
-  if (shopImage) updates["shop.shopImage"] = shopImage;
+  if (shopName) updates.storeName = shopName;
+  if (shopDescription) updates.storeDescription = shopDescription;
+  if (shopImage) updates.storeLogo = shopImage;
   if (phone) updates.phone = phone;
 
-  const vendor = await User.findByIdAndUpdate(req.user.id, updates, {
+  const vendor = await VendorAccount.findByIdAndUpdate(req.user.id, updates, {
     new: true,
     runValidators: true,
   }).select("-password");
@@ -472,7 +472,7 @@ exports.updateShopSettings = asyncHandler(async (req, res) => {
 
 // Get shop settings
 exports.getShopSettings = asyncHandler(async (req, res) => {
-  const vendor = await User.findById(req.user.id).select("-password");
+  const vendor = await VendorAccount.findById(req.user.id).select("-password");
 
   if (!vendor) {
     return res.status(404).json({ success: false, message: "Vendor not found" });
@@ -481,10 +481,10 @@ exports.getShopSettings = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     shop: {
-      name: vendor.shop?.shopName || "",
-      description: vendor.shop?.shopDescription || "",
-      image: vendor.shop?.shopImage || "",
-      verified: vendor.shop?.verified || false,
+      name: vendor.storeName || "",
+      description: vendor.storeDescription || "",
+      image: vendor.storeLogo || "",
+      verified: vendor.isVerified || false,
     },
     contact: {
       phone: vendor.phone || "",

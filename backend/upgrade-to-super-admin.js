@@ -1,8 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const readline = require('readline');
-const User = require('./src/models/User');
-const Admin = require('./src/models/Admin');
+const AdminAccount = require('./src/models/AdminAccount');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -29,9 +28,7 @@ async function upgradeToSuperAdmin() {
     });
     console.log('✅ Connected to MongoDB\n');
 
-    // Find all admins
-    const admins = await Admin.find()
-      .populate('user', 'email firstName lastName');
+    const admins = await AdminAccount.find().select('-password');
 
     if (admins.length === 0) {
       console.log('❌ No admin profiles found in the database.');
@@ -47,10 +44,9 @@ async function upgradeToSuperAdmin() {
     console.log('═══════════════════════════════════════════════════════\n');
 
     admins.forEach((admin, index) => {
-      const user = admin.user;
       const levelIcon = admin.adminLevel === 'super_admin' ? '👑' : '👤';
-      console.log(`${index + 1}. ${levelIcon} ${user.email}`);
-      console.log(`   Name: ${user.firstName} ${user.lastName}`);
+      console.log(`${index + 1}. ${levelIcon} ${admin.email}`);
+      console.log(`   Name: ${admin.firstName} ${admin.lastName}`);
       console.log(`   Level: ${admin.adminLevel}`);
       console.log(`   Active: ${admin.isActive ? '✅' : '❌'}`);
       console.log('');
@@ -77,31 +73,43 @@ async function upgradeToSuperAdmin() {
     }
 
     const selectedAdmin = admins[selectedIndex];
-    const selectedUser = selectedAdmin.user;
 
     if (selectedAdmin.adminLevel === 'super_admin') {
-      console.log(`\n⚠️  ${selectedUser.email} is already a super admin!`);
+      console.log(`\n⚠️  ${selectedAdmin.email} is already a super admin!`);
       await mongoose.connection.close();
       rl.close();
       return;
     }
 
-    console.log(`\n📝 Upgrading ${selectedUser.email} to super_admin...`);
+    console.log(`\n📝 Upgrading ${selectedAdmin.email} to super_admin...`);
 
     // Update admin level and grant all permissions
-    await Admin.findByIdAndUpdate(selectedAdmin._id, {
+    await AdminAccount.findByIdAndUpdate(selectedAdmin._id, {
       adminLevel: 'super_admin',
-      canManageUsers: true,
-      canManageVendors: true,
-      canVerifyVendors: true,
-      canManageProducts: true,
-      canDeleteProducts: true,
-      canFeatureProducts: true,
-      canManageOrders: true,
-      canSuspendVendors: true,
-      canSuspendUsers: true,
-      canDeleteVendors: true,
-      canViewFinancials: true,
+      permissions: {
+        canManageUsers: true,
+        canDeleteUsers: true,
+        canSuspendUsers: true,
+        canManageVendors: true,
+        canVerifyVendors: true,
+        canSuspendVendors: true,
+        canDeleteVendors: true,
+        canManageProducts: true,
+        canDeleteProducts: true,
+        canFeatureProducts: true,
+        canManageOrders: true,
+        canRefundOrders: true,
+        canCancelOrders: true,
+        canManageCategories: true,
+        canManageBanners: true,
+        canManagePromotions: true,
+        canViewFinancials: true,
+        canProcessPayouts: true,
+        canManageCommissions: true,
+        canManageSettings: true,
+        canViewLogs: true,
+        canManageAdmins: true,
+      },
       isActive: true
     });
 
@@ -109,7 +117,7 @@ async function upgradeToSuperAdmin() {
     console.log('\n═══════════════════════════════════════════════════════');
     console.log('UPDATED ADMIN DETAILS:');
     console.log('═══════════════════════════════════════════════════════');
-    console.log(`👑 Email: ${selectedUser.email}`);
+    console.log(`👑 Email: ${selectedAdmin.email}`);
     console.log(`🎯 Level: super_admin`);
     console.log(`✨ All permissions: GRANTED`);
     console.log('═══════════════════════════════════════════════════════');
