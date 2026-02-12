@@ -8,7 +8,7 @@ const orderSchema = new mongoose.Schema(
     },
     customer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "CustomerAccount",
+      ref: "Customer",
       required: true,
     },
     items: [
@@ -20,7 +20,7 @@ const orderSchema = new mongoose.Schema(
         },
         vendor: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "VendorAccount",
+          ref: "Vendor",
         },
         quantity: {
           type: Number,

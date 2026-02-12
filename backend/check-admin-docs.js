@@ -1,11 +1,11 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const AdminAccount = require('./src/models/AdminAccount');
+const Admin = require('./src/models/Admin');
 
 mongoose.connect(process.env.MONGODB_URI).then(async () => {
   console.log('Connected to MongoDB');
 
-  const admins = await AdminAccount.find().select('-password');
+  const admins = await Admin.find().select('-password');
   console.log(`\nAdmin accounts found: ${admins.length}`);
 
   admins.forEach((admin) => {

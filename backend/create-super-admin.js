@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 require("dotenv").config({ path: "./.env" });
 
-const AdminAccount = require("./src/models/AdminAccount");
+const Admin = require("./src/models/Admin");
 
 async function createSuperAdmin() {
   try {
@@ -19,14 +19,14 @@ async function createSuperAdmin() {
     });
     console.log("✅ Connected to MongoDB");
 
-    const existingAdmin = await AdminAccount.findOne({ email: "superadmin@shopez.com" });
+    const existingAdmin = await Admin.findOne({ email: "superadmin@shopez.com" });
     if (existingAdmin) {
       console.log("⚠️  Super admin already exists");
       mongoose.connection.close();
       return;
     }
 
-    await AdminAccount.create({
+    await Admin.create({
       firstName: "Super",
       lastName: "Admin",
       email: "superadmin@shopez.com",

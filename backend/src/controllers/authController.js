@@ -1,19 +1,19 @@
 const jwt = require("jsonwebtoken");
-const CustomerAccount = require("../models/CustomerAccount");
-const VendorAccount = require("../models/VendorAccount");
-const AdminAccount = require("../models/AdminAccount");
+const Customer = require("../models/Customer");
+const Vendor = require("../models/Vendor");
+const Admin = require("../models/Admin");
 
 const accountModels = {
-  customer: CustomerAccount,
-  vendor: VendorAccount,
-  admin: AdminAccount,
+  customer: Customer,
+  vendor: Vendor,
+  admin: Admin,
 };
 
 const findExistingAccountByEmail = async (email) => {
   const [customer, vendor, admin] = await Promise.all([
-    CustomerAccount.findOne({ email }),
-    VendorAccount.findOne({ email }),
-    AdminAccount.findOne({ email }),
+    Customer.findOne({ email }),
+    Vendor.findOne({ email }),
+    Admin.findOne({ email }),
   ]);
 
   if (customer) return { account: customer, role: "customer" };
@@ -89,7 +89,7 @@ const customerSignup = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const customer = new CustomerAccount({
+    const customer = new Customer({
       firstName,
       lastName,
       email,
@@ -163,7 +163,7 @@ const vendorSignup = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const vendor = new VendorAccount({
+    const vendor = new Vendor({
       firstName,
       lastName,
       email,

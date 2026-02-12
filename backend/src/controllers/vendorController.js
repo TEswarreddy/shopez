@@ -1,6 +1,6 @@
 const Product = require("../models/Product");
 const Order = require("../models/Order");
-const VendorAccount = require("../models/VendorAccount");
+const Vendor = require("../models/Vendor");
 const asyncHandler = require("../middlewares/asyncHandler");
 const mongoose = require("mongoose");
 
@@ -58,7 +58,7 @@ exports.getDashboardStats = asyncHandler(async (req, res) => {
 
 // Get vendor profile with shop settings
 exports.getVendorProfile = asyncHandler(async (req, res) => {
-  const vendor = await VendorAccount.findById(req.user.id).select("-password");
+  const vendor = await Vendor.findById(req.user.id).select("-password");
 
   if (!vendor) {
     return res.status(404).json({ success: false, message: "Vendor not found" });
@@ -458,7 +458,7 @@ exports.updateShopSettings = asyncHandler(async (req, res) => {
   if (shopImage) updates.storeLogo = shopImage;
   if (phone) updates.phone = phone;
 
-  const vendor = await VendorAccount.findByIdAndUpdate(req.user.id, updates, {
+  const vendor = await Vendor.findByIdAndUpdate(req.user.id, updates, {
     new: true,
     runValidators: true,
   }).select("-password");
@@ -472,7 +472,7 @@ exports.updateShopSettings = asyncHandler(async (req, res) => {
 
 // Get shop settings
 exports.getShopSettings = asyncHandler(async (req, res) => {
-  const vendor = await VendorAccount.findById(req.user.id).select("-password");
+  const vendor = await Vendor.findById(req.user.id).select("-password");
 
   if (!vendor) {
     return res.status(404).json({ success: false, message: "Vendor not found" });

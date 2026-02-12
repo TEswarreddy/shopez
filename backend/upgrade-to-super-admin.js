@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const readline = require('readline');
-const AdminAccount = require('./src/models/AdminAccount');
+const Admin = require('./src/models/Admin');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -28,7 +28,7 @@ async function upgradeToSuperAdmin() {
     });
     console.log('✅ Connected to MongoDB\n');
 
-    const admins = await AdminAccount.find().select('-password');
+    const admins = await Admin.find().select('-password');
 
     if (admins.length === 0) {
       console.log('❌ No admin profiles found in the database.');
@@ -84,7 +84,7 @@ async function upgradeToSuperAdmin() {
     console.log(`\n📝 Upgrading ${selectedAdmin.email} to super_admin...`);
 
     // Update admin level and grant all permissions
-    await AdminAccount.findByIdAndUpdate(selectedAdmin._id, {
+    await Admin.findByIdAndUpdate(selectedAdmin._id, {
       adminLevel: 'super_admin',
       permissions: {
         canManageUsers: true,

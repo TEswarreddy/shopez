@@ -1,4 +1,4 @@
-const CustomerAccount = require("../models/CustomerAccount");
+const Customer = require("../models/Customer");
 const mongoose = require("mongoose");
 const asyncHandler = require("../middlewares/asyncHandler");
 
@@ -14,7 +14,7 @@ const ensureCustomer = (req, res) => {
 exports.getProfile = asyncHandler(async (req, res) => {
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id).select("-password");
+  const user = await Customer.findById(req.user.id).select("-password");
   
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -39,7 +39,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     }
   });
 
-  const user = await CustomerAccount.findByIdAndUpdate(req.user.id, updates, {
+  const user = await Customer.findByIdAndUpdate(req.user.id, updates, {
     new: true,
     runValidators: true,
   }).select("-password");
@@ -80,7 +80,7 @@ exports.changePassword = asyncHandler(async (req, res) => {
   // Get user with password
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id).select("+password");
+  const user = await Customer.findById(req.user.id).select("+password");
 
   // Verify current password
   const isPasswordCorrect = await user.comparePassword(currentPassword);
@@ -116,7 +116,7 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
 
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findByIdAndUpdate(
+  const user = await Customer.findByIdAndUpdate(
     req.user.id,
     { profileImage },
     { new: true }
@@ -133,7 +133,7 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
 exports.getAddresses = asyncHandler(async (req, res) => {
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id);
+  const user = await Customer.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -160,7 +160,7 @@ exports.addAddress = asyncHandler(async (req, res) => {
 
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id);
+  const user = await Customer.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -208,7 +208,7 @@ exports.updateAddress = asyncHandler(async (req, res) => {
 
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id);
+  const user = await Customer.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });
@@ -248,7 +248,7 @@ exports.deleteAddress = asyncHandler(async (req, res) => {
 
   if (!ensureCustomer(req, res)) return;
 
-  const user = await CustomerAccount.findById(req.user.id);
+  const user = await Customer.findById(req.user.id);
 
   if (!user) {
     return res.status(404).json({ success: false, message: "User not found" });

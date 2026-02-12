@@ -1,13 +1,9 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const dns = require("dns");
-const User = require("../src/models/User");
 const Customer = require("../src/models/Customer");
 const Vendor = require("../src/models/Vendor");
 const Admin = require("../src/models/Admin");
-const CustomerAccount = require("../src/models/CustomerAccount");
-const VendorAccount = require("../src/models/VendorAccount");
-const AdminAccount = require("../src/models/AdminAccount");
 
 const permissionFields = [
   "canManageUsers",
@@ -69,10 +65,20 @@ const migrateAccounts = async () => {
     family: 4,
   });
 
-  const users = await User.find().select("+password");
-  const customers = await Customer.find();
-  const vendors = await Vendor.find();
-  const admins = await Admin.find();
+  const legacyUserSchema = new mongoose.Schema({}, { strict: false, collection: "users" });
+  const legacyCustomerSchema = new mongoose.Schema({}, { strict: false, collection: "customers" });
+  const legacyVendorSchema = new mongoose.Schema({}, { strict: false, collection: "vendors" });
+  const legacyAdminSchema = new mongoose.Schema({}, { strict: false, collection: "admins" });
+
+  const LegacyUser = mongoose.model("LegacyUser", legacyUserSchema);
+  const LegacyCustomer = mongoose.model("LegacyCustomer", legacyCustomerSchema);
+  const LegacyVendor = mongoose.model("LegacyVendor", legacyVendorSchema);
+  const LegacyAdmin = mongoose.model("LegacyAdmin", legacyAdminSchema);
+
+  const users = await LegacyUser.find();
+  const customers = await LegacyCustomer.find();
+  const vendors = await LegacyVendor.find();
+  const admins = await LegacyAdmin.find();
 
   const customerMap = new Map(customers.map((c) => [toStringId(c.user), c]));
   const vendorMap = new Map(vendors.map((v) => [toStringId(v.user), v]));
@@ -105,7 +111,7 @@ const migrateAccounts = async () => {
     };
 
     if (role === "customer") {
-      const exists = await CustomerAccount.findById(user._id);
+      const exists = await Customer.findById(user._id);
       if (exists) {
         skipped += 1;
         continue;
@@ -130,13 +136,13 @@ const migrateAccounts = async () => {
         updatedAt: customer?.updatedAt || user.updatedAt,
       };
 
-      await CustomerAccount.collection.insertOne(doc);
+      await Customer.collection.insertOne(doc);
       created += 1;
       continue;
     }
 
     if (role === "vendor") {
-      const exists = await VendorAccount.findById(user._id);
+      const exists = await Vendor.findById(user._id);
       if (exists) {
         skipped += 1;
         continue;
@@ -197,13 +203,13 @@ const migrateAccounts = async () => {
         delete doc.storeSlug;
       }
 
-      await VendorAccount.collection.insertOne(doc);
+      await Vendor.collection.insertOne(doc);
       created += 1;
       continue;
     }
 
     if (role === "admin") {
-      const exists = await AdminAccount.findById(user._id);
+      const exists = await Admin.findById(user._id);
       if (exists) {
         skipped += 1;
         continue;
@@ -236,7 +242,7 @@ const migrateAccounts = async () => {
         updatedAt: admin?.updatedAt || user.updatedAt,
       };
 
-      await AdminAccount.collection.insertOne(doc);
+      await Admin.collection.insertOne(doc);
       created += 1;
       continue;
     }

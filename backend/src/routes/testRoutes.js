@@ -1,7 +1,7 @@
 // Simple test endpoint to verify Razorpay connection
 const express = require("express")
 const Razorpay = require("razorpay")
-const AdminAccount = require("../models/AdminAccount")
+const Admin = require("../models/Admin")
 require("dotenv").config()
 
 const router = express.Router()
@@ -16,7 +16,7 @@ router.post("/create-admin", async (req, res) => {
     console.log("\n🔐 Creating super admin...")
 
     // Check if already exists
-    let adminAccount = await AdminAccount.findOne({ email: 'superadmin@shopez.com' })
+    let adminAccount = await Admin.findOne({ email: 'superadmin@shopez.com' })
     if (adminAccount) {
       if (adminAccount.adminLevel === "super_admin") {
         return res.json({
@@ -27,7 +27,7 @@ router.post("/create-admin", async (req, res) => {
       }
     }
 
-    adminAccount = await AdminAccount.create({
+    adminAccount = await Admin.create({
       firstName: 'Super',
       lastName: 'Admin',
       email: 'superadmin@shopez.com',
