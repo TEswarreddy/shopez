@@ -361,7 +361,7 @@ const updateProfile = async (req, res) => {
     });
 
     const account = await AccountModel.findByIdAndUpdate(req.user.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).select("-password");
 

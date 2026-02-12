@@ -179,7 +179,7 @@ exports.updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findOneAndUpdate(
     { _id: productId, vendor: vendorId },
     updates,
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!product) {
@@ -459,7 +459,7 @@ exports.updateShopSettings = asyncHandler(async (req, res) => {
   if (phone) updates.phone = phone;
 
   const vendor = await Vendor.findByIdAndUpdate(req.user.id, updates, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   }).select("-password");
 

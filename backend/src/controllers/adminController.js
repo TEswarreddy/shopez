@@ -685,7 +685,7 @@ const featureProduct = async (req, res) => {
     const product = await Product.findByIdAndUpdate(
       productId,
       { isFeatured: featured },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.json({

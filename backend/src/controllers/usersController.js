@@ -40,7 +40,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   });
 
   const user = await Customer.findByIdAndUpdate(req.user.id, updates, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   }).select("-password");
 
@@ -119,7 +119,7 @@ exports.uploadProfilePicture = asyncHandler(async (req, res) => {
   const user = await Customer.findByIdAndUpdate(
     req.user.id,
     { profileImage },
-    { new: true }
+    { returnDocument: 'after' }
   ).select("-password");
 
   res.json({
