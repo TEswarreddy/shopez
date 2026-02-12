@@ -11,7 +11,15 @@ function VendorManagement() {
   const [showModal, setShowModal] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
   const [suspensionReason, setSuspensionReason] = useState("")
-  const [actionType, setActionType] = useState("") // verify, reject, suspend
+  const [actionType, setActionType] = useState("") // verify, reject, suspend, edit
+  const [editFormData, setEditFormData] = useState({
+    businessName: "",
+    businessPhone: "",
+    businessEmail: "",
+    storeName: "",
+    businessCategory: "",
+    commission: ""
+  })
 
   useEffect(() => {
     fetchVendors()
@@ -125,9 +133,50 @@ function VendorManagement() {
     }
   }
 
+  const handleEditVendor = async () => {
+    try {
+      const response = await axios.put(`/admin/vendors/${selectedVendor._id}`, editFormData)
+      if (response.data.success) {
+        setVendors(
+          vendors.map((v) =>
+            v._id === selectedVendor._id
+              ? { ...v, ...response.data.vendor }
+              : v
+          )
+        )
+        setShowModal(false)
+        setSelectedVendor(null)
+        setEditFormData({
+          businessName: "",
+          businessPhone: "",
+          businessEmail: "",
+          storeName: "",
+          businessCategory: "",
+          commission: ""
+        })
+        alert("Vendor updated successfully!")
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update vendor")
+    }
+  }
+
   const openModal = (vendor, type) => {
     setSelectedVendor(vendor)
     setActionType(type)
+    
+    // Pre-fill form data for edit mode
+    if (type === "edit") {
+      setEditFormData({
+        businessName: vendor.businessName || "",
+        businessPhone: vendor.businessPhone || "",
+        businessEmail: vendor.businessEmail || "",
+        storeName: vendor.storeName || "",
+        businessCategory: vendor.businessCategory || "",
+        commission: vendor.commission || ""
+      })
+    }
+    
     setShowModal(true)
   }
 
@@ -137,6 +186,14 @@ function VendorManagement() {
     setRejectionReason("")
     setSuspensionReason("")
     setActionType("")
+    setEditFormData({
+      businessName: "",
+      businessPhone: "",
+      businessEmail: "",
+      storeName: "",
+      businessCategory: "",
+      commission: ""
+    })
   }
 
   if (loading) {
@@ -235,37 +292,45 @@ function VendorManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {vendor.verificationStatus === "pending" && !vendor.isSuspended && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openModal(vendor, "verify")}
-                            className="text-green-600 hover:text-green-800 text-sm font-medium"
-                          >
-                            Verify
-                          </button>
-                          <button
-                            onClick={() => openModal(vendor, "reject")}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                      {vendor.isSuspended ? (
+                      <div className="flex gap-3">
+                        {vendor.verificationStatus === "pending" && !vendor.isSuspended && (
+                          <>
+                            <button
+                              onClick={() => openModal(vendor, "verify")}
+                              className="text-green-600 hover:text-green-800 text-sm font-medium"
+                            >
+                              Verify
+                            </button>
+                            <button
+                              onClick={() => openModal(vendor, "reject")}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
                         <button
-                          onClick={() => openModal(vendor, "unsuspend")}
+                          onClick={() => openModal(vendor, "edit")}
                           className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         >
-                          Unsuspend
+                          Edit
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => openModal(vendor, "suspend")}
-                          className="text-orange-600 hover:text-orange-800 text-sm font-medium"
-                        >
-                          Suspend
-                        </button>
-                      )}
+                        {vendor.isSuspended ? (
+                          <button
+                            onClick={() => openModal(vendor, "unsuspend")}
+                            className="text-purple-600 hover:text-purple-800 text-sm font-medium"
+                          >
+                            Unsuspend
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => openModal(vendor, "suspend")}
+                            className="text-orange-600 hover:text-orange-800 text-sm font-medium"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -278,12 +343,13 @@ function VendorManagement() {
       {/* Modal */}
       {showModal && selectedVendor && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-slate-900 mb-4">
               {actionType === "verify" && "Verify Vendor"}
               {actionType === "reject" && "Reject Vendor"}
               {actionType === "suspend" && "Suspend Vendor"}
               {actionType === "unsuspend" && "Unsuspend Vendor"}
+              {actionType === "edit" && "Edit Vendor"}
             </h2>
 
             <p className="text-slate-600 mb-4">
@@ -291,26 +357,117 @@ function VendorManagement() {
               {selectedVendor.storeName})
             </p>
 
-            {(actionType === "reject" || actionType === "suspend") && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {actionType === "reject" ? "Rejection Reason" : "Suspension Reason"}
-                </label>
-                <textarea
-                  value={actionType === "reject" ? rejectionReason : suspensionReason}
-                  onChange={(e) =>
-                    actionType === "reject"
-                      ? setRejectionReason(e.target.value)
-                      : setSuspensionReason(e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
-                  rows="3"
-                  placeholder="Enter reason..."
-                />
+            {actionType === "edit" ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Business Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.businessName}
+                      onChange={(e) => setEditFormData({ ...editFormData, businessName: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Store Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.storeName}
+                      onChange={(e) => setEditFormData({ ...editFormData, storeName: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Business Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      value={editFormData.businessPhone}
+                      onChange={(e) => setEditFormData({ ...editFormData, businessPhone: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Business Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editFormData.businessEmail}
+                      onChange={(e) => setEditFormData({ ...editFormData, businessEmail: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Business Category
+                    </label>
+                    <select
+                      value={editFormData.businessCategory}
+                      onChange={(e) => setEditFormData({ ...editFormData, businessCategory: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    >
+                      <option value="">Select Category</option>
+                      <option value="electronics">Electronics</option>
+                      <option value="fashion">Fashion</option>
+                      <option value="home">Home</option>
+                      <option value="beauty">Beauty</option>
+                      <option value="sports">Sports</option>
+                      <option value="books">Books</option>
+                      <option value="food">Food</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={editFormData.commission}
+                      onChange={(e) => setEditFormData({ ...editFormData, commission: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+                </div>
               </div>
+            ) : (
+              (actionType === "reject" || actionType === "suspend") && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {actionType === "reject" ? "Rejection Reason" : "Suspension Reason"}
+                  </label>
+                  <textarea
+                    value={actionType === "reject" ? rejectionReason : suspensionReason}
+                    onChange={(e) =>
+                      actionType === "reject"
+                        ? setRejectionReason(e.target.value)
+                        : setSuspensionReason(e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                    rows="3"
+                    placeholder="Enter reason..."
+                  />
+                </div>
+              )
             )}
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={closeModal}
                 className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-900 hover:bg-slate-50 transition"
@@ -325,7 +482,9 @@ function VendorManagement() {
                     ? handleRejectVendor
                     : actionType === "suspend"
                     ? handleSuspendVendor
-                    : handleUnsuspendVendor
+                    : actionType === "unsuspend"
+                    ? handleUnsuspendVendor
+                    : handleEditVendor
                 }
                 className={`flex-1 px-4 py-2 text-white rounded-lg transition ${
                   actionType === "verify"
@@ -334,6 +493,8 @@ function VendorManagement() {
                     ? "bg-red-600 hover:bg-red-700"
                     : actionType === "suspend"
                     ? "bg-orange-600 hover:bg-orange-700"
+                    : actionType === "unsuspend"
+                    ? "bg-purple-600 hover:bg-purple-700"
                     : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
@@ -341,6 +502,7 @@ function VendorManagement() {
                 {actionType === "reject" && "Reject"}
                 {actionType === "suspend" && "Suspend"}
                 {actionType === "unsuspend" && "Unsuspend"}
+                {actionType === "edit" && "Update Vendor"}
               </button>
             </div>
           </div>

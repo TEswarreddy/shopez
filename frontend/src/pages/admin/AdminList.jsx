@@ -7,6 +7,8 @@ function AdminList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedAdmin, setSelectedAdmin] = useState(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -14,7 +16,23 @@ function AdminList() {
     lastName: "",
     adminLevel: "admin",
   })
+  const [editFormData, setEditFormData] = useState({
+    adminLevel: "admin",
+  })
   const [permissions, setPermissions] = useState({
+    canManageUsers: false,
+    canManageVendors: false,
+    canVerifyVendors: false,
+    canManageProducts: false,
+    canDeleteProducts: false,
+    canFeatureProducts: false,
+    canManageOrders: false,
+    canSuspendVendors: false,
+    canSuspendUsers: false,
+    canDeleteVendors: false,
+    canViewFinancials: false,
+  })
+  const [editPermissions, setEditPermissions] = useState({
     canManageUsers: false,
     canManageVendors: false,
     canVerifyVendors: false,
@@ -52,6 +70,72 @@ function AdminList() {
 
   const handlePermissionChange = (permission) => {
     setPermissions({ ...permissions, [permission]: !permissions[permission] })
+  }
+
+  const handleEditPermissionChange = (permission) => {
+    setEditPermissions({ ...editPermissions, [permission]: !editPermissions[permission] })
+  }
+
+  const openEditModal = (admin) => {
+    setSelectedAdmin(admin)
+    setEditFormData({
+      adminLevel: admin.adminLevel,
+    })
+    
+    // Set permissions from admin object
+    const adminPermissions = {
+      canManageUsers: admin.permissions?.canManageUsers || admin.canManageUsers || false,
+      canManageVendors: admin.permissions?.canManageVendors || admin.canManageVendors || false,
+      canVerifyVendors: admin.permissions?.canVerifyVendors || admin.canVerifyVendors || false,
+      canManageProducts: admin.permissions?.canManageProducts || admin.canManageProducts || false,
+      canDeleteProducts: admin.permissions?.canDeleteProducts || admin.canDeleteProducts || false,
+      canFeatureProducts: admin.permissions?.canFeatureProducts || admin.canFeatureProducts || false,
+      canManageOrders: admin.permissions?.canManageOrders || admin.canManageOrders || false,
+      canSuspendVendors: admin.permissions?.canSuspendVendors || admin.canSuspendVendors || false,
+      canSuspendUsers: admin.permissions?.canSuspendUsers || admin.canSuspendUsers || false,
+      canDeleteVendors: admin.permissions?.canDeleteVendors || admin.canDeleteVendors || false,
+      canViewFinancials: admin.permissions?.canViewFinancials || admin.canViewFinancials || false,
+    }
+    setEditPermissions(adminPermissions)
+    setShowEditModal(true)
+  }
+
+  const closeEditModal = () => {
+    setShowEditModal(false)
+    setSelectedAdmin(null)
+    setEditFormData({ adminLevel: "admin" })
+    setEditPermissions({
+      canManageUsers: false,
+      canManageVendors: false,
+      canVerifyVendors: false,
+      canManageProducts: false,
+      canDeleteProducts: false,
+      canFeatureProducts: false,
+      canManageOrders: false,
+      canSuspendVendors: false,
+      canSuspendUsers: false,
+      canDeleteVendors: false,
+      canViewFinancials: false,
+    })
+  }
+
+  const handleUpdateAdmin = async (e) => {
+    e.preventDefault()
+    try {
+      const response = await axios.put(`/admin/admins/${selectedAdmin._id}`, {
+        adminLevel: editFormData.adminLevel,
+        permissions: editPermissions,
+      })
+      if (response.data.success) {
+        setAdmins(admins.map(a => 
+          a._id === selectedAdmin._id ? response.data.admin : a
+        ))
+        closeEditModal()
+        alert("Admin updated successfully!")
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to update admin")
+    }
   }
 
   const handleCreateAdmin = async (e) => {
@@ -288,13 +372,92 @@ function AdminList() {
                       {new Date(admin.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      <button 
+                        onClick={() => openEditModal(admin)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
                         Edit
                       </button>
                     </td>
                   </tr>
                 ))
               )}
+
+        {/* Edit Admin Modal */}
+        {showEditModal && selectedAdmin && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Edit Admin</h2>
+              
+              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-600">
+                  <strong>Name:</strong> {selectedAdmin.user?.firstName} {selectedAdmin.user?.lastName}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <strong>Email:</strong> {selectedAdmin.user?.email}
+                </p>
+              </div>
+
+              <form onSubmit={handleUpdateAdmin} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Admin Level
+                  </label>
+                  <select
+                    value={editFormData.adminLevel}
+                    onChange={(e) => setEditFormData({ ...editFormData, adminLevel: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="support">Support</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-4">
+                    Permissions
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {Object.keys(editPermissions).map((permission) => (
+                      <label key={permission} className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={editPermissions[permission]}
+                          onChange={() => handleEditPermissionChange(permission)}
+                          className="w-4 h-4 accent-blue-600"
+                        />
+                        <span className="text-sm text-slate-700">
+                          {permission
+                            .replace(/^can/, "")
+                            .replace(/([A-Z])/g, " $1")
+                            .trim()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-900 hover:bg-slate-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Update Admin
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
             </tbody>
           </table>
         </div>

@@ -62,10 +62,36 @@ const getAllAdmins = async (req, res) => {
   try {
     const { page = 1, limit = 10, adminLevel } = req.query;
 
+    console.log('getAllAdmins called by user:', req.user);
+
+    // Check if user ID exists
+    if (!req.user || !req.user.id) {
+      console.error('❌ No user ID in request');
+      return res.status(401).json({ 
+        success: false,
+        message: "User authentication failed. Please log in again." 
+      });
+    }
+
     // Only super admins can view all admins
     const requestingAdmin = await Admin.findOne({ user: req.user.id });
-    if (!requestingAdmin || requestingAdmin.adminLevel !== "super_admin") {
-      return res.status(403).json({ message: "Only super admins can view all admins" });
+    
+    console.log('Requesting admin:', requestingAdmin);
+    
+    if (!requestingAdmin) {
+      console.error('❌ No Admin document found for user:', req.user.id);
+      return res.status(403).json({ 
+        success: false,
+        message: "Admin profile not found. Please contact the system administrator." 
+      });
+    }
+    
+    if (requestingAdmin.adminLevel !== "super_admin") {
+      console.warn('⚠️  Access denied - user is not super admin:', requestingAdmin.adminLevel);
+      return res.status(403).json({ 
+        success: false,
+        message: "Only super admins can view all admins" 
+      });
     }
 
     let filter = {};
@@ -92,7 +118,11 @@ const getAllAdmins = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('❌ Error in getAllAdmins:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -269,6 +299,52 @@ const verifyVendor = async (req, res) => {
       success: true,
       message: "Vendor verified successfully",
       vendor
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Update vendor details
+const updateVendor = async (req, res) => {
+  try {
+    const { vendorId } = req.params;
+
+    const admin = await Admin.findOne({ user: req.user.id });
+    if (!admin || !admin.hasPermission("canManageVendors")) {
+      return res.status(403).json({ message: "No permission to update vendors" });
+    }
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    // Allowed fields for admin to update
+    const allowedUpdates = [
+      'businessName', 'businessType', 'businessDescription', 'businessCategory',
+      'businessEmail', 'businessPhone', 'alternatePhone',
+      'businessAddress', 'pickupAddress',
+      'gstNumber', 'storeName', 'storeDescription',
+      'commission'
+    ];
+
+    // Update only allowed fields
+    Object.keys(req.body).forEach(key => {
+      if (allowedUpdates.includes(key)) {
+        vendor[key] = req.body[key];
+      }
+    });
+
+    await vendor.save();
+
+    const updatedVendor = await Vendor.findById(vendorId)
+      .populate("user", "firstName lastName email phone");
+
+    res.json({
+      success: true,
+      message: "Vendor updated successfully",
+      vendor: updatedVendor
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -1047,6 +1123,7 @@ module.exports = {
   suspendVendor,
   unsuspendVendor,
   deleteVendor,
+  updateVendor,
   
   // Customer Management
   getAllCustomers,

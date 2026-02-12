@@ -72,6 +72,9 @@ const customerSignup = async (req, res) => {
 // Vendor Signup
 const vendorSignup = async (req, res) => {
   try {
+    console.log('Vendor signup request received');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     const { 
       firstName, 
       lastName, 
@@ -96,25 +99,30 @@ const vendorSignup = async (req, res) => {
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password || !businessName || !businessType || !businessPhone || !panNumber) {
+      console.log('Missing required fields');
       return res.status(400).json({ message: "Please provide all required fields" });
     }
 
     // Validate business address
     if (!businessAddress || !businessAddress.street || !businessAddress.city || !businessAddress.state || !businessAddress.postalCode) {
+      console.log('Invalid business address:', businessAddress);
       return res.status(400).json({ message: "Please provide complete business address" });
     }
 
     // Validate bank details
     if (!bankDetails || !bankDetails.accountHolderName || !bankDetails.accountNumber || !bankDetails.ifscCode) {
+      console.log('Invalid bank details:', bankDetails);
       return res.status(400).json({ message: "Please provide complete bank details" });
     }
 
     // Check if user exists
     let user = await User.findOne({ email });
     if (user) {
+      console.log('User already exists:', email);
       return res.status(400).json({ message: "User already exists" });
     }
 
+    console.log('Creating user...');
     // Create user
     user = new User({
       firstName,
@@ -126,7 +134,9 @@ const vendorSignup = async (req, res) => {
     });
 
     await user.save();
+    console.log('User created:', user._id);
 
+    console.log('Creating vendor profile...');
     // Create vendor profile
     const vendor = new Vendor({
       user: user._id,
@@ -149,6 +159,7 @@ const vendorSignup = async (req, res) => {
     });
 
     await vendor.save();
+    console.log('Vendor created:', vendor._id);
 
     // Generate JWT
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -175,6 +186,8 @@ const vendorSignup = async (req, res) => {
       message: "Vendor account created. Verification is pending."
     });
   } catch (error) {
+    console.error('❌ Vendor signup error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: error.message });
   }
 };

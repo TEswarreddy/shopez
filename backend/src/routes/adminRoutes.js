@@ -14,6 +14,7 @@ const {
   suspendVendor,
   unsuspendVendor,
   deleteVendor,
+  updateVendor,
   
   // Customer Management
   getAllCustomers,
@@ -48,6 +49,7 @@ router.delete("/admins/:adminId", adminAuth, deactivateAdmin);
 // ===================================
 router.get("/vendors", adminAuth, getAllVendors);
 router.get("/vendors/:vendorId", adminAuth, getVendorDetails);
+router.put("/vendors/:vendorId", adminAuth, updateVendor);
 router.put("/vendors/:vendorId/verify", adminAuth, verifyVendor);
 router.put("/vendors/:vendorId/reject", adminAuth, rejectVendor);
 router.put("/vendors/:vendorId/suspend", adminAuth, suspendVendor);
