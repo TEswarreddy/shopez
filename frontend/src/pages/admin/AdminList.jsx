@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import axios from "../../api/axios"
+import AdminSidebar from "../../components/AdminSidebar"
 
 function AdminList() {
   const [admins, setAdmins] = useState([])
@@ -98,6 +99,8 @@ function AdminList() {
   }
 
   return (
+    <div className="flex">
+      <AdminSidebar />
     <div className="min-h-screen px-4 py-8 bg-slate-50">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
@@ -295,6 +298,7 @@ function AdminList() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   )

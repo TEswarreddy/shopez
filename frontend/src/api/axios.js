@@ -26,9 +26,23 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Unauthorized - token expired or invalid
       localStorage.removeItem("token")
       localStorage.removeItem("user")
-      window.location.href = "/login"
+      
+      // Redirect based on current path
+      const currentPath = window.location.pathname
+      if (currentPath.startsWith("/admin")) {
+        window.location.href = "/admin/login"
+      } else if (currentPath.startsWith("/vendor")) {
+        window.location.href = "/vendor/login"
+      } else {
+        window.location.href = "/login"
+      }
+    } else if (error.response?.status === 403) {
+      // Forbidden - user doesn't have permission
+      console.error("Access forbidden:", error.response?.data?.message)
+      // Don't automatically redirect on 403, let components handle it
     }
     return Promise.reject(error)
   }

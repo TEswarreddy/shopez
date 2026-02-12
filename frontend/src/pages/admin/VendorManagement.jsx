@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import axios from "../../api/axios"
+import AdminSidebar from "../../components/AdminSidebar"
 
 function VendorManagement() {
   const [vendors, setVendors] = useState([])
@@ -147,7 +148,9 @@ function VendorManagement() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 bg-slate-50">
+    <div className="flex">
+      <AdminSidebar />
+      <div className="flex-1 min-h-screen px-4 py-8 bg-slate-50">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Vendor Management</h1>
@@ -343,6 +346,7 @@ function VendorManagement() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

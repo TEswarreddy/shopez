@@ -1,26 +1,69 @@
 import { useState, useEffect } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import axios from "../../api/axios"
+import AdminSidebar from "../../components/AdminSidebar"
+import { useAuth } from "../../context/AuthContext"
 
 function AdminDashboard() {
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const [stats, setStats] = useState(null)
   const [adminInfo, setAdminInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
+    // Debug: Log current user info
+    console.log("Current user:", user)
+    console.log("Token exists:", !!localStorage.getItem("token"))
+    
+    // Check if user is logged in and is an admin
+    if (!user) {
+      console.warn("No user found, redirecting to login...")
+      navigate("/admin/login")
+      return
+    }
+    
+    if (user.role !== "admin") {
+      console.error("User role:", user.role, "- Admin role required")
+      setError("Access denied. Admin privileges required.")
+      setLoading(false)
+      return
+    }
+
     fetchDashboardStats()
-  }, [])
+  }, [user, navigate])
 
   const fetchDashboardStats = async () => {
     try {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        navigate("/admin/login")
+        return
+      }
+
       const response = await axios.get("/admin/dashboard/stats")
       if (response.data.success) {
         setStats(response.data.stats)
         setAdminInfo(response.data.adminInfo)
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load dashboard data")
+      if (err.response?.status === 403) {
+        setError("Access denied. You don't have permission to view this page.")
+        // Clear invalid auth and redirect
+        setTimeout(() => {
+          logout()
+          navigate("/admin/login")
+        }, 2000)
+      } else if (err.response?.status === 401) {
+        setError("Session expired. Please login again.")
+        setTimeout(() => {
+          logout()
+          navigate("/admin/login")
+        }, 2000)
+      } else {
+        setError(err.response?.data?.message || "Failed to load dashboard data")
+      }
     } finally {
       setLoading(false)
     }
@@ -28,10 +71,13 @@ function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-slate-600">Loading dashboard...</p>
+      <div className="flex">
+        <AdminSidebar />
+        <div className="flex-1 min-h-[calc(100vh-64px)] flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     )
@@ -39,9 +85,44 @@ function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
-          <p className="text-red-700">{error}</p>
+      <div className="flex">
+        <AdminSidebar />
+        <div className="flex-1 min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
+          <div className="max-w-md w-full space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <div className="flex items-center mb-3">
+                <svg className="w-6 h-6 text-red-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-red-800">Access Error</h3>
+              </div>
+              <p className="text-red-700 mb-4">{error}</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate("/admin/login")}
+                  className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex-1 border-2 border-red-300 text-red-700 px-4 py-2 rounded-lg font-semibold hover:bg-red-50 transition"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-800 mb-2">Common Issues:</h4>
+              <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                <li>Make sure you're logged in with an <strong>admin account</strong></li>
+                <li>Customer or vendor accounts cannot access this page</li>
+                <li>Check the browser console (F12) for more details</li>
+                <li>Try logging out and logging in again</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -50,7 +131,9 @@ function AdminDashboard() {
   const isSuperAdmin = adminInfo?.level === "super_admin"
 
   return (
-    <div className="min-h-[calc(100vh-64px)] px-4 py-8 bg-slate-50">
+    <div className="flex">
+      <AdminSidebar />
+      <div className="flex-1 min-h-[calc(100vh-64px)] px-4 py-8 bg-slate-50">
       <div className="mx-auto w-full">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
@@ -285,6 +368,7 @@ function AdminDashboard() {
           )}
         </div>
       </div>
+    </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import axiosInstance from "../../api/axios"
+import VendorSidebar from "../../components/VendorSidebar"
 
 function VendorProducts() {
   const [products, setProducts] = useState([])
@@ -105,7 +106,9 @@ function VendorProducts() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+    <div className="flex">
+      <VendorSidebar />
+      <div className="flex-1 min-h-[calc(100vh-64px)] bg-slate-50">
       {/* Header */}
       <div className="sticky top-16 z-40 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
@@ -347,6 +350,7 @@ function VendorProducts() {
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

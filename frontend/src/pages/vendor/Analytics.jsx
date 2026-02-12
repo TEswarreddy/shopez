@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import axiosInstance from "../../api/axios"
+import VendorSidebar from "../../components/VendorSidebar"
 
 function VendorAnalytics() {
   const [analytics, setAnalytics] = useState(null)
@@ -38,7 +39,9 @@ function VendorAnalytics() {
   const data = analytics || {}
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50">
+    <div className="flex">
+      <VendorSidebar />
+      <div className="flex-1 min-h-[calc(100vh-64px)] bg-slate-50">
       {/* Header */}
       <div className="sticky top-16 z-40 bg-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 py-6">
@@ -222,6 +225,7 @@ function VendorAnalytics() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

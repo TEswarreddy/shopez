@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import axios from "../../api/axios"
+import AdminSidebar from "../../components/AdminSidebar"
 
 function OrderManagement() {
   const [orders, setOrders] = useState([])
@@ -52,7 +53,9 @@ function OrderManagement() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 bg-slate-50">
+    <div className="flex">
+      <AdminSidebar />
+      <div className="flex-1 min-h-screen px-4 py-8 bg-slate-50">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Order Management</h1>
@@ -289,6 +292,7 @@ function OrderManagement() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
