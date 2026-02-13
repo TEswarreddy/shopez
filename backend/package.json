@@ -5,7 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start:vault": "dotenvx run -- node server.js",
+    "start:vault:prod": "dotenvx -f .env.production run -- node server.js",
+    "dev": "nodemon server.js",
+    "dev:vault": "dotenvx run -- nodemon server.js",
+    "secrets:init": "dotenvx init",
+    "secrets:set": "dotenvx set",
+    "secrets:list": "dotenvx ls",
+    "secrets:encrypt": "dotenvx encrypt"
   },
   "keywords": [],
   "author": "",

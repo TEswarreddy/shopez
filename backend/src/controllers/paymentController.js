@@ -1,6 +1,7 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Order = require("../models/Order");
+const Payment = require("../models/Payment");
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -121,6 +122,27 @@ const verifyPayment = async (req, res) => {
           order.razorpayOrderId = razorpay_order_id;
           order.status = "confirmed";
           await order.save();
+          
+          // Record payment in Payment model
+          const vendorId = order.items[0]?.vendor;
+          const payment = await Payment.create({
+            transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            razorpayPaymentId: razorpay_payment_id,
+            orderRef: orderId,
+            customer: order.customer,
+            vendor: vendorId,
+            paymentMethod: "razorpay",
+            orderAmount: order.totalAmount,
+            totalAmount: order.totalAmount,
+            commissionPercentage: 10,
+            status: "completed",
+            paymentGatewayResponse: {
+              razorpayOrderId: razorpay_order_id,
+              razorpaySignature: razorpay_signature,
+            },
+          });
+          
+          console.log("✅ Payment recorded successfully:", payment.transactionId);
           console.log("Order updated with payment confirmation");
         }
       }
@@ -199,6 +221,16 @@ const refundPayment = async (req, res) => {
     if (order) {
       order.paymentStatus = "refunded";
       await order.save();
+    }
+    
+    // Update payment record
+    const payment = await Payment.findOne({ razorpayPaymentId: paymentId });
+    if (payment) {
+      payment.refundAmount = amount || payment.totalAmount;
+      payment.status = amount && amount < payment.totalAmount ? "partially_refunded" : "refunded";
+      payment.refundedAt = new Date();
+      await payment.save();
+      console.log("✅ Payment record updated for refund");
     }
 
     res.json({

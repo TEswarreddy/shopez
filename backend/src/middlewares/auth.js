@@ -36,4 +36,19 @@ const vendorAuth = (req, res, next) => {
   });
 };
 
-module.exports = { auth, adminAuth, vendorAuth };
+const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    auth(req, res, () => {
+      if (allowedRoles.includes(req.user.role)) {
+        next();
+      } else {
+        res.status(403).json({ 
+          message: `Access restricted to: ${allowedRoles.join(", ")}`,
+          role: req.user.role
+        });
+      }
+    });
+  };
+};
+
+module.exports = { auth, adminAuth, vendorAuth, authorize };

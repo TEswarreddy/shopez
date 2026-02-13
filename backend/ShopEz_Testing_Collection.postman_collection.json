@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "ShopEz Testing - All User Types",
+    "description": "Comprehensive testing collection for ShopEz with all user types (Customer, Vendor, Admin, Super Admin)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Get All Test Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/test/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "users"]
+            },
+            "description": "Get list of all test users for reference (no auth required)"
+          }
+        },
+        {
+          "name": "Login - Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"customer1@test.com\",\"password\":\"customer123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "login"]
+            },
+            "description": "Login as Customer - Copy token from response"
+          }
+        },
+        {
+          "name": "Login - Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"vendor1@test.com\",\"password\":\"vendor123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "login"]
+            },
+            "description": "Login as Vendor - Copy token from response"
+          }
+        },
+        {
+          "name": "Login - Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin1@test.com\",\"password\":\"admin123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "login"]
+            },
+            "description": "Login as Admin - Copy token from response"
+          }
+        },
+        {
+          "name": "Login - Super Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"superadmin@test.com\",\"password\":\"superadmin123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "login"]
+            },
+            "description": "Login as Super Admin - Copy token from response"
+          }
+        },
+        {
+          "name": "Get Current User Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/me",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "me"]
+            },
+            "description": "Get current logged-in user information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 CUSTOMER TESTS",
+      "item": [
+        {
+          "name": "Get Customer Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/customer/profile",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "customer", "profile"]
+            },
+            "description": "Get current customer profile (requires customer auth)"
+          }
+        },
+        {
+          "name": "Get Customer Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/customer/orders",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "customer", "orders"]
+            },
+            "description": "Get all orders for current customer"
+          }
+        },
+        {
+          "name": "Update Customer Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"firstName\":\"John Updated\",\"lastName\":\"Doe\",\"phone\":\"9999999999\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/customer/profile",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "customer", "profile"]
+            },
+            "description": "Update customer profile information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏪 VENDOR TESTS",
+      "item": [
+        {
+          "name": "Get Vendor Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/vendor/profile",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "vendor", "profile"]
+            },
+            "description": "Get current vendor's profile"
+          }
+        },
+        {
+          "name": "Get Vendor Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/vendor/products",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "vendor", "products"]
+            },
+            "description": "Get all products for current vendor"
+          }
+        },
+        {
+          "name": "Get Vendor Orders/Sales",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/vendor/orders",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "vendor", "orders"]
+            },
+            "description": "Get all orders/sales for current vendor"
+          }
+        },
+        {
+          "name": "Update Vendor Store Info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{vendor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"storeName\":\"Tech Store Updated\",\"storeDescription\":\"Premium Electronics\",\"businessType\":\"Retail\"}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/vendor/profile",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "vendor", "profile"]
+            },
+            "description": "Update vendor store information"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 ADMIN TESTS",
+      "item": [
+        {
+          "name": "Get Admin Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "dashboard"]
+            },
+            "description": "Get admin dashboard with system statistics"
+          }
+        },
+        {
+          "name": "Get All Customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/customers?page=1&limit=10",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "customers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get list of all customers with pagination"
+          }
+        },
+        {
+          "name": "Get All Vendors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/vendors?page=1&limit=10",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "vendors"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get list of all vendors with pagination"
+          }
+        },
+        {
+          "name": "Get System Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/stats",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "stats"]
+            },
+            "description": "Get comprehensive system statistics"
+          }
+        },
+        {
+          "name": "Suspend Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/customer/CUSTOMER_ID/suspend",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "customer", "CUSTOMER_ID", "suspend"]
+            },
+            "description": "Suspend a customer (replace CUSTOMER_ID with actual ID)"
+          }
+        },
+        {
+          "name": "Verify Vendor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/admin/vendor/VENDOR_ID/verify",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "admin", "vendor", "VENDOR_ID", "verify"]
+            },
+            "description": "Verify a vendor (replace VENDOR_ID with actual ID)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 SUPER ADMIN TESTS",
+      "item": [
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superadmin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/test/superadmin/admins",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "superadmin", "admins"]
+            },
+            "description": "Get all admin accounts (super admin only)"
+          }
+        },
+        {
+          "name": "Update Admin Permissions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superadmin_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"permissions\":{\"canManageUsers\":true,\"canDeleteUsers\":false,\"canManageVendors\":true,\"canViewFinancials\":true}}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/test/superadmin/admin/ADMIN_ID/permissions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "test", "superadmin", "admin", "ADMIN_ID", "permissions"]
+            },
+            "description": "Update admin permissions (super admin only, replace ADMIN_ID with actual ID)"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "customer_token",
+      "value": "paste_customer_token_here",
+      "type": "string"
+    },
+    {
+      "key": "vendor_token",
+      "value": "paste_vendor_token_here",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "paste_admin_token_here",
+      "type": "string"
+    },
+    {
+      "key": "superadmin_token",
+      "value": "paste_superadmin_token_here",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "paste_any_token_here",
+      "type": "string"
+    }
+  ]
+}

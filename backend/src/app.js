@@ -26,6 +26,7 @@ app.use("/api/reviews", require("./routes/reviewRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/vendor", require("./routes/vendorRoutes"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/test", require("./routes/testRoutes"));
 
 // Health check
