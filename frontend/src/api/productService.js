@@ -6,15 +6,22 @@ export const getProducts = async (params = {}) => {
   const products = response.data.products || []
   
   // Transform products to match frontend expectations
-  return products.map(product => ({
-    ...product,
-    images: Array.isArray(product.images) 
-      ? product.images 
-      : (typeof product.images === 'string' ? product.images.split(' ').filter(Boolean) : []),
-    rating: product.ratings?.average || product.rating || 0,
-    brand: product.brand || product.vendor?.firstName || 'Unknown',
-    inStock: product.stock > 0
-  }))
+  return products.map(product => {
+    const normalizedStock = Number(
+      product.stock ?? product.countInStock ?? product.inventory?.stock ?? 0
+    )
+
+    return {
+      ...product,
+      stock: Number.isNaN(normalizedStock) ? 0 : normalizedStock,
+      images: Array.isArray(product.images) 
+        ? product.images 
+        : (typeof product.images === 'string' ? product.images.split(' ').filter(Boolean) : []),
+      rating: product.ratings?.average || product.rating || 0,
+      brand: product.brand || product.vendor?.firstName || 'Unknown',
+      inStock: !Number.isNaN(normalizedStock) && normalizedStock > 0
+    }
+  })
 }
 
 // Get single product by ID
@@ -23,14 +30,19 @@ export const getProductById = async (productId) => {
   const product = response.data.product
   
   // Transform product to match frontend expectations
+  const normalizedStock = Number(
+    product.stock ?? product.countInStock ?? product.inventory?.stock ?? 0
+  )
+
   return {
     ...product,
+    stock: Number.isNaN(normalizedStock) ? 0 : normalizedStock,
     images: Array.isArray(product.images) 
       ? product.images 
       : (typeof product.images === 'string' ? product.images.split(' ').filter(Boolean) : []),
     rating: product.ratings?.average || product.rating || 0,
     brand: product.brand || product.vendor?.firstName || 'Unknown',
-    inStock: product.stock > 0
+    inStock: !Number.isNaN(normalizedStock) && normalizedStock > 0
   }
 }
 

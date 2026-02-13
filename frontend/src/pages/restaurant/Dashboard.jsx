@@ -17,7 +17,8 @@ function VendorDashboard() {
       setLoading(true)
       const { data } = await axiosInstance.get("/vendor/dashboard/stats")
       if (data.success) {
-        setDashboard(data.data)
+        const payload = data.data || data
+        setDashboard(payload)
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load dashboard")
@@ -57,7 +58,7 @@ function VendorDashboard() {
   const topProducts = dashboard?.topProducts || []
   const recentOrders = dashboard?.recentOrders || []
   const performanceMetrics = dashboard?.performance || {}
-  const inventory = dashboard?.inventory || {}
+  const inventory = dashboard?.inventory || { lowStockItems: [], lowStockCount: 0 }
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50">

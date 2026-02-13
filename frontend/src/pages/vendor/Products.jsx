@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import axiosInstance from "../../api/axios"
 import VendorSidebar from "../../components/VendorSidebar"
@@ -11,14 +11,33 @@ function VendorProducts() {
   const [searchTerm, setSearchTerm] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [imagePreview, setImagePreview] = useState("")
+  const [imageError, setImageError] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     stock: "",
     category: "",
-    image: "",
+    images: [],
   })
+
+  const categoryOptions = useMemo(() => {
+    const defaults = [
+      "Electronics",
+      "Fashion",
+      "Home",
+      "Beauty",
+      "Sports",
+      "Grocery",
+      "Books",
+      "Toys",
+      "Automotive",
+      "Other",
+    ]
+    const dynamic = products.map((product) => product.category).filter(Boolean)
+    return Array.from(new Set([...defaults, ...dynamic]))
+  }, [products])
 
   useEffect(() => {
     fetchProducts()
@@ -43,16 +62,68 @@ function VendorProducts() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) {
+      setImagePreview("")
+      setImageError("")
+      setFormData((prev) => ({ ...prev, images: [] }))
+      return
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      setImageError("Only JPG, PNG, or WEBP images are allowed.")
+      setImagePreview("")
+      setFormData((prev) => ({ ...prev, images: [] }))
+      return
+    }
+
+    const maxSizeBytes = 2 * 1024 * 1024
+    if (file.size > maxSizeBytes) {
+      setImageError("Image must be smaller than 2MB.")
+      setImagePreview("")
+      setFormData((prev) => ({ ...prev, images: [] }))
+      return
+    }
+
+    setImageError("")
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : ""
+      setImagePreview(result)
+      setFormData((prev) => ({ ...prev, images: result ? [result] : [] }))
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      if (!editingProduct && formData.images.length === 0) {
+        setImageError("Please select a product image.")
+        return
+      }
+
+      const payload = {
+        ...formData,
+        images:
+          formData.images.length > 0
+            ? formData.images
+            : Array.isArray(editingProduct?.images)
+              ? editingProduct.images
+              : [],
+      }
+
       if (editingProduct) {
-        await axiosInstance.put(`/vendor/products/${editingProduct._id}`, formData)
+        await axiosInstance.put(`/vendor/products/${editingProduct._id}`, payload)
       } else {
-        await axiosInstance.post("/vendor/products", formData)
+        await axiosInstance.post("/vendor/products", payload)
       }
       setShowForm(false)
-      setFormData({ name: "", description: "", price: "", stock: "", category: "", image: "" })
+      setFormData({ name: "", description: "", price: "", stock: "", category: "", images: [] })
+      setImagePreview("")
+      setImageError("")
       setEditingProduct(null)
       fetchProducts()
     } catch (err) {
@@ -61,6 +132,12 @@ function VendorProducts() {
   }
 
   const handleEdit = (product) => {
+    const existingImages = Array.isArray(product.images)
+      ? product.images
+      : product.image
+        ? [product.image]
+        : []
+
     setEditingProduct(product)
     setFormData({
       name: product.name,
@@ -68,8 +145,10 @@ function VendorProducts() {
       price: product.price,
       stock: product.stock,
       category: product.category,
-      image: product.image,
+      images: existingImages,
     })
+    setImagePreview(existingImages[0] || "")
+    setImageError("")
     setShowForm(true)
   }
 
@@ -120,7 +199,9 @@ function VendorProducts() {
             <button
               onClick={() => {
                 setEditingProduct(null)
-                setFormData({ name: "", description: "", price: "", stock: "", category: "", image: "" })
+                setFormData({ name: "", description: "", price: "", stock: "", category: "", images: [] })
+                setImagePreview("")
+                setImageError("")
                 setShowForm(!showForm)
               }}
               className="bg-[#1f5fbf] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#1a4da0] transition flex items-center gap-2"
@@ -172,15 +253,22 @@ function VendorProducts() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
-                <input
-                  type="text"
+                <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
                   required
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1f5fbf] focus:border-transparent"
-                  placeholder="e.g., Electronics, Clothing"
-                />
+                >
+                  <option value="" disabled>
+                    Select a category
+                  </option>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -224,15 +312,23 @@ function VendorProducts() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Image URL</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Product Image</label>
                 <input
-                  type="url"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleInputChange}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleImageChange}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#1f5fbf] focus:border-transparent"
-                  placeholder="https://example.com/image.jpg"
                 />
+                {imageError && (
+                  <p className="mt-2 text-sm text-red-600">{imageError}</p>
+                )}
+                {imagePreview && (
+                  <img
+                    src={imagePreview}
+                    alt="Product preview"
+                    className="mt-3 h-32 w-32 rounded-lg object-cover border border-slate-200"
+                  />
+                )}
               </div>
 
               <div className="md:col-span-2 flex gap-3">
@@ -293,8 +389,12 @@ function VendorProducts() {
             {filteredProducts.map((product) => (
               <div key={product._id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition">
                 <div className="h-40 bg-slate-100 overflow-hidden">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  {product.images?.[0] || product.image ? (
+                    <img
+                      src={product.images?.[0] || product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -19,10 +19,13 @@ function AdminAnalytics() {
       setLoading(true)
       const response = await axios.get(`/admin/analytics?range=${timeRange}`)
       if (response.data.success) {
-        console.log("Analytics data received:", response.data.analytics)
-        console.log("User growth points:", response.data.analytics.userGrowthTrend?.length)
-        console.log("Top vendors:", response.data.analytics.topVendors?.length, response.data.analytics.topVendors)
-        setAnalytics(response.data.analytics)
+        const payload = response.data.analytics || response.data.data || response.data
+        console.log("Analytics data received:", payload)
+        console.log("User growth points:", payload.userGrowthTrend?.length)
+        console.log("Top vendors:", payload.topVendors?.length, payload.topVendors)
+        setAnalytics(payload)
+      } else {
+        setError(response.data.message || "Failed to load analytics")
       }
     } catch (err) {
       console.error("Analytics error:", err.response?.data || err.message)
@@ -310,8 +313,9 @@ function AdminAnalytics() {
                     <path
                       d={(() => {
                         const maxValue = Math.max(...data.revenueTrend.map((p) => p.value), 1)
+                        const maxIndex = Math.max(data.revenueTrend.length - 1, 1)
                         const points = data.revenueTrend.map((point, idx) => {
-                          const x = (idx / (data.revenueTrend.length - 1)) * 600
+                          const x = (idx / maxIndex) * 600
                           const y = 220 - (point.value / maxValue) * 200
                           return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
                         }).join(' ')
@@ -329,8 +333,9 @@ function AdminAnalytics() {
                     <path
                       d={(() => {
                         const maxValue = Math.max(...data.revenueTrend.map((p) => p.value), 1)
+                        const maxIndex = Math.max(data.revenueTrend.length - 1, 1)
                         const points = data.revenueTrend.map((point, idx) => {
-                          const x = (idx / (data.revenueTrend.length - 1)) * 600
+                          const x = (idx / maxIndex) * 600
                           const y = 220 - (point.value / maxValue) * 200
                           return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
                         }).join(' ')
@@ -343,7 +348,8 @@ function AdminAnalytics() {
                     {/* Data points */}
                     {data.revenueTrend.map((point, idx) => {
                       const maxValue = Math.max(...data.revenueTrend.map((p) => p.value), 1)
-                      const x = (idx / (data.revenueTrend.length - 1)) * 600
+                      const maxIndex = Math.max(data.revenueTrend.length - 1, 1)
+                      const x = (idx / maxIndex) * 600
                       const y = 220 - (point.value / maxValue) * 200
                       return (
                         <g key={idx}>
@@ -432,57 +438,109 @@ function AdminAnalytics() {
                 )}
                 {data.userGrowthTrend && data.userGrowthTrend.length > 0 ? (
                   <svg className="w-full h-full" viewBox="0 0 600 240" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="userLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#22c55e" />
+                        <stop offset="100%" stopColor="#16a34a" />
+                      </linearGradient>
+                      <linearGradient id="userAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                      </linearGradient>
+                      <linearGradient id="userGridFade" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#f8fafc" />
+                        <stop offset="100%" stopColor="#ffffff" />
+                      </linearGradient>
+                      <filter id="userLineGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#22c55e" floodOpacity="0.25" />
+                      </filter>
+                    </defs>
+
+                    <rect x="0" y="0" width="600" height="240" fill="url(#userGridFade)" />
+
                     {/* Grid lines */}
                     <line x1="0" y1="60" x2="600" y2="60" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="5,5" />
                     <line x1="0" y1="120" x2="600" y2="120" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="5,5" />
                     <line x1="0" y1="180" x2="600" y2="180" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="5,5" />
-                    
-                    {/* Line path */}
-                    <path
-                      d={(() => {
-                        const maxValue = Math.max(...data.userGrowthTrend.map((p) => p.value), 1)
-                        const points = data.userGrowthTrend.map((point, idx) => {
-                          const x = (idx / (data.userGrowthTrend.length - 1)) * 600
-                          const y = 220 - (point.value / maxValue) * 200
-                          return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
-                        }).join(' ')
-                        return points
-                      })()}
-                      fill="none"
-                      stroke="url(#userGradient)"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="drop-shadow-sm"
-                    />
-                    
+
+                    {/* Axes */}
+                    <line x1="0" y1="220" x2="600" y2="220" stroke="#16a34a" strokeWidth="1.5" />
+                    <line x1="0" y1="20" x2="0" y2="220" stroke="#16a34a" strokeWidth="1.5" />
+                    <text x="300" y="236" textAnchor="middle" fontSize="11" fill="#166534">Periods</text>
+                    <text x="12" y="120" textAnchor="middle" fontSize="11" fill="#166534" transform="rotate(-90 12 120)">Users</text>
+
+                    {/* Y-axis labels */}
+                    {(() => {
+                      const maxValue = Math.max(...data.userGrowthTrend.map((p) => p.value), 1)
+                      const ticks = [0, 0.25, 0.5, 0.75, 1]
+                      return ticks.map((ratio, idx) => {
+                        const value = Math.round(maxValue * ratio)
+                        const y = 220 - ratio * 200
+                        return (
+                          <text
+                            key={`user-tick-${idx}`}
+                            x="6"
+                            y={y}
+                            textAnchor="end"
+                            fontSize="10"
+                            fill="#15803d"
+                            dominantBaseline="middle"
+                          >
+                            {value}
+                          </text>
+                        )
+                      })
+                    })()}
+
                     {/* Area under line */}
                     <path
                       d={(() => {
                         const maxValue = Math.max(...data.userGrowthTrend.map((p) => p.value), 1)
+                        const maxIndex = Math.max(data.userGrowthTrend.length - 1, 1)
                         const points = data.userGrowthTrend.map((point, idx) => {
-                          const x = (idx / (data.userGrowthTrend.length - 1)) * 600
+                          const x = (idx / maxIndex) * 600
                           const y = 220 - (point.value / maxValue) * 200
                           return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
                         }).join(' ')
                         return `${points} L 600 220 L 0 220 Z`
                       })()}
                       fill="url(#userAreaGradient)"
-                      opacity="0.3"
                     />
-                    
+
+                    {/* Line path */}
+                    <path
+                      d={(() => {
+                        const maxValue = Math.max(...data.userGrowthTrend.map((p) => p.value), 1)
+                        const maxIndex = Math.max(data.userGrowthTrend.length - 1, 1)
+                        const points = data.userGrowthTrend.map((point, idx) => {
+                          const x = (idx / maxIndex) * 600
+                          const y = 220 - (point.value / maxValue) * 200
+                          return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
+                        }).join(' ')
+                        return points
+                      })()}
+                      fill="none"
+                      stroke="url(#userLineGradient)"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      filter="url(#userLineGlow)"
+                    />
+
                     {/* Data points */}
                     {data.userGrowthTrend.map((point, idx) => {
                       const maxValue = Math.max(...data.userGrowthTrend.map((p) => p.value), 1)
-                      const x = (idx / (data.userGrowthTrend.length - 1)) * 600
+                      const maxIndex = Math.max(data.userGrowthTrend.length - 1, 1)
+                      const x = (idx / maxIndex) * 600
                       const y = 220 - (point.value / maxValue) * 200
+                      const isLast = idx === data.userGrowthTrend.length - 1
                       return (
                         <g key={idx}>
                           <circle
                             cx={x}
                             cy={y}
-                            r="6"
-                            fill="#8b5cf6"
+                            r={isLast ? 7 : 5}
+                            fill={isLast ? "#16a34a" : "#22c55e"}
                             stroke="white"
                             strokeWidth="3"
                             className="cursor-pointer transition-all hover:r-8"
@@ -501,18 +559,6 @@ function AdminAnalytics() {
                         </g>
                       )
                     })}
-                    
-                    {/* Gradient definitions */}
-                    <defs>
-                      <linearGradient id="userGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#8b5cf6" />
-                        <stop offset="100%" stopColor="#7c3aed" />
-                      </linearGradient>
-                      <linearGradient id="userAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
                   </svg>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full animate-fade-in">
@@ -559,11 +605,12 @@ function AdminAnalytics() {
                       delivered: { bg: "bg-green-500", text: "text-green-700", light: "bg-green-50" },
                       cancelled: { bg: "bg-red-500", text: "text-red-700", light: "bg-red-50" },
                     }
-                    const color = colors[status.name.toLowerCase()] || { bg: "bg-slate-400", text: "text-slate-700", light: "bg-slate-50" }
+                    const statusName = (status.name || "unknown").toString()
+                    const color = colors[statusName.toLowerCase()] || { bg: "bg-slate-400", text: "text-slate-700", light: "bg-slate-50" }
                     return (
-                      <div key={status.name} className={`p-3 rounded-lg ${color.light} hover:shadow-md transition-all duration-200`}>
+                      <div key={statusName} className={`p-3 rounded-lg ${color.light} hover:shadow-md transition-all duration-200`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`text-sm font-bold capitalize ${color.text}`}>{status.name}</span>
+                          <span className={`text-sm font-bold capitalize ${color.text}`}>{statusName}</span>
                           <span className={`text-sm font-bold ${color.text}`}>{status.count}</span>
                         </div>
                         <div className="w-full h-3 rounded-full bg-white shadow-inner overflow-hidden">

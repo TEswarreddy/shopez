@@ -964,7 +964,7 @@ const getAnalytics = async (req, res) => {
       { $limit: 5 },
       {
         $lookup: {
-          from: "Vendors",
+          from: "vendors",
           localField: "_id",
           foreignField: "_id",
           as: "vendorInfo"

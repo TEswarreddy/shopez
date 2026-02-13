@@ -1,0 +1,11 @@
+
+
+vendor dashboard
+	-add product
+		- category will be dropdown list
+	-take image instead of url and check the errors
+	-not working active products
+admin side
+	-analytics errors
+	-product management
+
